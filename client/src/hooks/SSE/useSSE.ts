@@ -367,7 +367,7 @@ export default function useSSE(submission: TSubmission | null, index = 0) {
       if (!data) {
         const convoId = conversationId ?? v4();
         const errorResponse = parseErrorResponse({
-          text: 'Error connecting to server',
+          text: 'Error connecting to server, try refreshing the page.',
           ...submission,
           conversationId: convoId,
         });
@@ -604,7 +604,6 @@ export default function useSSE(submission: TSubmission | null, index = 0) {
     events.onerror = function (e: MessageEvent) {
       console.log('error in server stream.');
       startupConfig?.checkBalance && balanceQuery.refetch();
-      events.close();
 
       let data: TResData | undefined = undefined;
       try {

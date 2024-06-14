@@ -212,6 +212,7 @@ export default {
   com_ui_preview: 'Anteprima',
   com_ui_upload: 'Carica',
   com_ui_connect: 'Connetti',
+  com_ui_locked: 'Bloccato',
   com_ui_upload_delay:
     'Il caricamento di "{0}" sta richiedendo più tempo del previsto. Attendi il completamento dell\'indicizzazione per il recupero.',
   com_ui_privacy_policy: 'Informativa sulla privacy',
@@ -499,6 +500,7 @@ export default {
   com_nav_theme_light: 'Chiaro',
   com_nav_enter_to_send: 'Premi Invio per inviare messaggi',
   com_nav_user_name_display: 'Mostra nome utente nei messaggi',
+  com_nav_save_drafts: 'Salva bozze localmente',
   com_nav_show_code: 'Mostra sempre il codice quando si usa l\'interprete di codice',
   com_nav_clear_all_chats: 'Cancella tutte le chat',
   com_nav_confirm_clear: 'Conferma cancellazione',
@@ -520,8 +522,17 @@ export default {
   com_nav_help_faq: 'Guida e FAQ',
   com_nav_settings: 'Impostazioni',
   com_nav_search_placeholder: 'Cerca messaggi',
-  com_nav_setting_general: 'Generali',
-  com_nav_setting_beta: 'Funzionalità beta',
+  com_nav_delete_account: 'Elimina account',
+  com_nav_delete_account_confirm: 'Sei sicuro di voler eliminare il tuo account?',
+  com_nav_delete_account_button: 'Elimina permanentemente il mio account',
+  com_nav_delete_account_email_placeholder: 'Inserisci la tua email',
+  com_nav_delete_account_confirm_placeholder:
+    'Per procedere, digita "DELETE" nel campo di input sottostante',
+  com_dialog_delete_warning: 'ATTENZIONE: Questo cancellerà permanentemente il tuo account.',
+  com_dialog_delete_data_info: 'Tutti i tuoi dati verranno eliminati.',
+  com_dialog_delete_help_center: 'Per più informazioni, visita il nostro centro assistenza.',
+  com_nav_setting_general: 'Generale',
+  com_nav_setting_beta: 'Funzioni Beta',
   com_nav_setting_data: 'Controlli dati',
   com_nav_setting_speech: 'Voce',
   com_nav_setting_account: 'Account',
@@ -2356,6 +2367,10 @@ export const comparisons = {
   com_nav_user_name_display: {
     english: 'Display username in messages',
     translated: 'Mostra nome utente nei messaggi',
+  },
+  com_nav_save_drafts: {
+    english: 'Save drafts locally',
+    translated: 'Salva bozze localmente',
   },
   com_nav_show_code: {
     english: 'Always show code when using code interpreter',

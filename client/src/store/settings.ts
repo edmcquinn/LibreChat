@@ -52,7 +52,7 @@ const localStorageAtoms = {
   autoScroll: atomWithLocalStorage('autoScroll', false),
   showCode: atomWithLocalStorage('showCode', false),
   hideSidePanel: atomWithLocalStorage('hideSidePanel', false),
-  modularChat: atomWithLocalStorage('modularChat', false),
+  modularChat: atomWithLocalStorage('modularChat', true),
   LaTeXParsing: atomWithLocalStorage('LaTeXParsing', true),
   UsernameDisplay: atomWithLocalStorage('UsernameDisplay', true),
   TextToSpeech: atomWithLocalStorage('textToSpeech', true),
@@ -72,6 +72,7 @@ const localStorageAtoms = {
   splitAtTarget: atomWithLocalStorage('splitAtTarget', false),
   rememberForkOption: atomWithLocalStorage('rememberForkOption', true),
   playbackRate: atomWithLocalStorage<number | null>('playbackRate', null),
+  saveDrafts: atomWithLocalStorage('saveDrafts', false),
 };
 
 export default { ...staticAtoms, ...localStorageAtoms };
