@@ -58,7 +58,7 @@ function SocialLoginRender({
         serverDomain={startupConfig.serverDomain}
         oauthPath="google"
         Icon={GoogleIcon}
-        label={localize('com_auth_google_login')}
+        label=<p> {'Prediction Guard Employees Only'} </p>
         id="google"
       />
     ),
