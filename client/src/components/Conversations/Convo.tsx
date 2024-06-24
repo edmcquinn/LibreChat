@@ -171,12 +171,12 @@ export default function Conversation({ conversation, retainView, toggleNav, isLa
         )}
         title={title}
       >
-        <EndpointIcon
+        {/* <EndpointIcon
           conversation={conversation}
           endpointsConfig={endpointsConfig}
           size={20}
           context="menu-item"
-        />
+        /> */}
         {!renaming && (
           <div className="relative line-clamp-1 max-h-5 flex-1 grow overflow-hidden">{title}</div>
         )}
