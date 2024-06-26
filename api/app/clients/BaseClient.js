@@ -484,7 +484,10 @@ class BaseClient {
         if (
           completion &&
           this.options.toxicityCheckbox &&
-          this.options.endpoint === 'PredictionGuard'
+          (
+            this.options.endpoint === 'PredictionGuard' ||
+            this.options.endpoint.includes('Models')
+          )
         ) {
           try {
             const toxicityResponse = await fetch('https://api.predictionguard.com/toxicity', {
@@ -508,7 +511,10 @@ class BaseClient {
           completion &&
           this.options.factualityCheckbox &&
           this.options.factualityText &&
-          this.options.endpoint === 'PredictionGuard'
+          (
+            this.options.endpoint === 'PredictionGuard' ||
+            this.options.endpoint.includes('Models')
+          )
         ) {
           try {
             const factualityResponse = await fetch('https://api.predictionguard.com/factuality', {
