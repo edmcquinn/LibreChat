@@ -337,7 +337,14 @@ export default function Settings({ conversation, setOption, models, readonly }: 
           <TooltipTrigger asChild>
             <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
           </TooltipTrigger>
-          <TooltipContent>Choose an option for handling PII</TooltipContent>
+          <TooltipContent>
+Choose an option for handling PII -
+Replace: This replaces detected PII with fake names or details.
+Block: This blocks the prompt containing PII from reaching the LLM.
+Random: This replaces the detected PII with random characters.
+Category: This masks the PII with the entity type.
+Mask: This simply replaces PII with asterisks (*)
+          </TooltipContent>
         </Tooltip>
       </Label>
       <SelectDropDown
