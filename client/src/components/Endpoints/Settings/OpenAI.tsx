@@ -39,6 +39,8 @@ export default function Settings({ conversation, setOption, models, readonly }: 
     toxicityCheckbox,
     factualityCheckbox,
     factualityText,
+    injectCheckbox,
+    piiCheckbox,
   } = conversation ?? {};
 
   const [setChatGptLabel, chatGptLabelValue] = useDebouncedInput<string | null | undefined>({
@@ -78,6 +80,17 @@ export default function Settings({ conversation, setOption, models, readonly }: 
   });
   const setToxicity = setOption('toxicityCheckbox');
   const setFactuality = setOption('factualityCheckbox');
+  const setInjection = setOption('injectCheckbox');
+  const setPII = setOption('piiCheckbox');
+  const piiOptions = [
+    { value: '', label: 'None' }, // Default blank option
+    { value: 'Mask', label: 'Mask' },
+    { value: 'Fake', label: 'Fake' },
+    { value: 'Category', label: 'Category' },
+    { value: 'Random', label: 'Random' },
+    { value: 'Block', label: 'Block' },
+    // Add more options as needed
+  ];
   const setFactualityText = setOption('factualityText');
   const [setMaxOutputTokens, maxOutputTokensValue] = useDebouncedInput<number | null | undefined>({
     setOption,
@@ -279,6 +292,26 @@ export default function Settings({ conversation, setOption, models, readonly }: 
                 className="flex"
               />
             </div>
+
+            <div className="grid w-full items-center gap-2">
+              <Label htmlFor="inject-checkbox" className="text-left text-sm font-medium flex items-center">
+                <small>Block Prompt Injections</small>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
+                  </TooltipTrigger>
+                  <TooltipContent>Toggle Prompt Injection Check to assess whether the last incoming prompt might be an injection attempt before it reaches the LLM.</TooltipContent>
+                </Tooltip>
+              </Label>
+              <Switch
+                id="inject-checkbox"
+                checked={injectCheckbox ?? false}
+                onCheckedChange={(checked: boolean) => setInjection(checked)}
+                disabled={readonly}
+                className="flex"
+              />
+            </div>
+
             <div className="grid w-full items-center gap-2">
               <Label htmlFor="factuality-checkbox" className="text-left text-sm font-medium flex items-center">
                 <small>Factuality</small>
@@ -297,6 +330,27 @@ export default function Settings({ conversation, setOption, models, readonly }: 
                 className="flex"
               />
             </div>
+            <div className="grid w-full items-center gap-2">
+      <Label htmlFor="pii-dropdown" className="text-left text-sm font-medium flex items-center">
+        <small>PII Anonymization</small>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
+          </TooltipTrigger>
+          <TooltipContent>Choose an option for handling PII</TooltipContent>
+        </Tooltip>
+      </Label>
+      <SelectDropDown
+        id="pii-dropdown"
+        value={piiCheckbox ?? ''}
+        setValue={setPII}
+        availableValues={piiOptions}
+        disabled={readonly}
+        className={cn(defaultTextProps, 'flex w-full resize-none', removeFocusRings)}
+        containerClassName="flex w-full resize-none"
+        title="Select PII Anonymization Option"
+      />
+    </div>
           </div>
         </div>
       ) : (

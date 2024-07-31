@@ -424,6 +424,8 @@ class OpenAIClient extends BaseClient {
       toxicityCheckbox: this.options.toxicityCheckbox,
       consistencyCheckbox: this.options.consistencyCheckbox,
       factualityCheckbox: this.options.factualityCheckbox,
+      injectCheckbox: this.options.injectCheckbox,
+      piiCheckbox: this.options.piiCheckbox,
       factualityText: this.options.factualityText,
       spec: this.options.spec,
       ...this.modelOptions,
@@ -686,6 +688,8 @@ class OpenAIClient extends BaseClient {
     consistencyCheckbox,
     factualityCheckbox,
     factualityText,
+    injectCheckbox,
+    piiCheckbox,
   }) {
     const modelOptions = {
       modelName: modelName ?? model,
@@ -696,8 +700,10 @@ class OpenAIClient extends BaseClient {
       toxicityCheckbox,
       consistencyCheckbox,
       factualityCheckbox,
+      injectCheckbox,
+      piiCheckbox,
       factualityText,
-      max_tokens
+      max_tokens,
     };
 
     if (max_tokens) {
@@ -1227,17 +1233,100 @@ ${convo}
       }
 
       let UnexpectedRoleError = false;
+
+
+      const messages = modelOptions.messages;
+
+
+
+
+let lastIndex = -1;
+let lastUserMessageContent;
+for (let i = messages.length - 1; i >= 0; i--) {
+  const message = messages[i];
+  if (message.role === 'user') {
+    lastIndex = i;
+    lastUserMessageContent = message.content;
+    break;
+  }
+}
+
+      let blockPromptInject = this.options.injectCheckbox
+      let inject = 0
+      let PiiBlock = false
+      if (
+        blockPromptInject == true
+      ) {
+        try {
+          const injectResponse = await fetch('https://api.predictionguard.com/injection', {
+            method: 'POST',
+            headers: {
+              'x-api-key': this.apiKey, // Use your actual API key
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ prompt: `${lastUserMessageContent}`, detect: true }),
+          });
+          const injectData = await injectResponse.json();
+          // Ensure the API response structure is as expected and adjust as necessary
+          inject = injectData.checks[0].probability;
+        } catch (error) {
+          console.error('Error fetching factuality score:', error);
+          inject = null; // Or handle the error as appropriate
+        }
+      }
+
+      if (
+        this.options.piiCheckbox == "Block"
+      ) {
+        try {
+          PiiBlock = false
+          const completionResponse = await fetch('https://api.predictionguard.com/completions', {
+            method: 'POST',
+            headers: {
+              'x-api-key': this.apiKey, // Use your actual API key
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'Nous-Hermes-Llama2-13B',
+              prompt: `${lastUserMessageContent}`,
+              max_tokens: 100,
+              temperature: 0.7,
+              top_p: 0.9,
+              input: { pii: 'block' },
+            }),
+          });
+        
+          const completionData = await completionResponse.json();
+          PiiBlock = completionData.choices[0].status.includes('personal');
+        } catch (error) {
+          console.error('Error fetching PII status:', error);
+          PiiBlock = null; // Or handle the error as appropriate
+        } }
+
+
+
+
       if (modelOptions.stream) {
         if (this.options.max_tokens) {
           modelOptions.max_tokens = this.options.max_tokens;
         } else {
           modelOptions.max_tokens = 1000
         }
+        const allowedPiiValues = ['Mask', 'Fake', 'Category', 'Random'];
+
+        const includeInput = allowedPiiValues.includes(this.options.piiCheckbox);
+
         const stream = await openai.beta.chat.completions
-          .stream({
-            ...modelOptions,
-            stream: true,
-          })
+        .stream({
+          ...modelOptions,
+          stream: true,
+          ...(includeInput ? {
+            input: {
+              "pii": "replace",
+              "pii_replace_method": this.options.piiCheckbox.toLowerCase()
+            }
+          } : {})
+        })
           .on('abort', () => {
             /* Do nothing here */
           })
@@ -1262,11 +1351,24 @@ ${convo}
           });
 
         const azureDelay = this.modelOptions.model?.includes('gpt-4') ? 30 : 17;
+        console.log(PiiBlock)
+
+
+        if (inject > 0.7) {
+          intermediateReply = "⚠️ System Message: Prompt Injection Detected. Please rewrite prompt or turn off Prompt Injection Detection in the conversation settings ⚠️"
+          return intermediateReply
+        } else if (PiiBlock) {
+          intermediateReply = "⚠️ System Message: Personal Identifiable Information Detected. Please rewrite prompt or turn off the Block PII in the conversation settings ⚠️"
+          return intermediateReply
+        }
+
 
         for await (const chunk of stream) {
+          
           const token = chunk.choices[0]?.delta?.content || '';
           intermediateReply += token;
           onProgress(token);
+          
           if (abortController.signal.aborted) {
             stream.controller.abort();
             break;

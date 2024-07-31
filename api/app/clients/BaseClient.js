@@ -477,8 +477,11 @@ class BaseClient {
     let consistency = null;
     let factuality = null;
 
+    
+
     const completion = await this.sendCompletion(payload, opts);
     this.abortController.requestCompleted = true;
+
 
         //Prediction Guard Toxicity Call
         if (
@@ -534,6 +537,7 @@ class BaseClient {
           }
         }
 
+        
     const responseMessage = {
       messageId: responseMessageId,
       conversationId,

@@ -343,6 +343,8 @@ export const tConversationSchema = z.object({
    toxicityCheckbox: z.boolean().optional(),
    consistencyCheckbox: z.boolean().optional(),
    factualityCheckbox: z.boolean().optional(),
+   injectCheckbox: z.boolean().optional(),
+   piiCheckbox: z.string().nullable().optional(),
    factualityText: z.string().nullable().optional(),
   /*
   Deprecated fields
@@ -440,6 +442,8 @@ export const openAISchema = tConversationSchema
     consistencyCheckbox: true,
     factualityCheckbox: true,
     toxicityCheckbox: true,
+    injectCheckbox: true,
+    piiCheckbox: true,
     factualityText: true,
   })
   .transform((obj) => {
@@ -465,6 +469,8 @@ export const openAISchema = tConversationSchema
     consistencyCheckbox: obj.consistencyCheckbox ?? false,
     factualityCheckbox: obj.factualityCheckbox ?? false,
     toxicityCheckbox: obj.toxicityCheckbox ?? false,
+    injectCheckbox: obj.injectCheckbox ?? false,
+    piiCheckbox: obj.piiCheckbox ?? null,
     factualityText: obj.factualityText ?? null,
     };
 
@@ -494,6 +500,8 @@ export const openAISchema = tConversationSchema
     consistencyCheckbox: false,
     factualityCheckbox: false,
     toxicityCheckbox: false,
+    injectCheckbox: false,
+    piiCheckbox: null,
     factualityText: null,
   }));
 
@@ -779,6 +787,8 @@ export const compactOpenAISchema = tConversationSchema
     toxicityCheckbox: true,
     consistencyCheckbox: true,
     factualityCheckbox: true,
+    injectCheckbox: true,
+    piiCheckbox: true,
     factualityText: true,
   })
   .transform((obj: Partial<TConversation>) => {

@@ -11,6 +11,8 @@ const buildOptions = (endpoint, parsedBody) => {
     consistencyCheckbox,
     factualityCheckbox,
     toxicityCheckbox,
+    piiCheckbox,
+    injectCheckbox,
     factualityText,
     max_tokens,
     ...rest
@@ -29,6 +31,8 @@ const buildOptions = (endpoint, parsedBody) => {
     factualityCheckbox,
     toxicityCheckbox,
     factualityText,
+    piiCheckbox,
+    injectCheckbox,
     max_tokens,
     modelOptions: {
       ...rest,
