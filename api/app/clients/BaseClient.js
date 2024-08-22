@@ -486,17 +486,13 @@ class BaseClient {
         //Prediction Guard Toxicity Call
         if (
           completion &&
-          this.options.toxicityCheckbox &&
-          (
-            this.options.endpoint === 'PredictionGuard' ||
-            this.options.endpoint.includes('Models')
-          )
+          this.options.toxicityCheckbox 
         ) {
           try {
             const toxicityResponse = await fetch('https://api.predictionguard.com/toxicity', {
               method: 'POST',
               headers: {
-                'x-api-key': this.apiKey, // Use your actual API key
+                'x-api-key': process.env.PGTOKEN, // Use your actual API key
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({ text: completion }),
@@ -513,17 +509,12 @@ class BaseClient {
         if (
           completion &&
           this.options.factualityCheckbox &&
-          this.options.factualityText &&
-          (
-            this.options.endpoint === 'PredictionGuard' ||
-            this.options.endpoint.includes('Models')
-          )
-        ) {
+          this.options.factualityText) {
           try {
             const factualityResponse = await fetch('https://api.predictionguard.com/factuality', {
               method: 'POST',
               headers: {
-                'x-api-key': this.apiKey, // Use your actual API key
+                'x-api-key': process.env.PGTOKEN, // Use your actual API key
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({ text: completion, reference: this.options.factualityText }),

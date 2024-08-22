@@ -1261,7 +1261,7 @@ for (let i = messages.length - 1; i >= 0; i--) {
           const injectResponse = await fetch('https://api.predictionguard.com/injection', {
             method: 'POST',
             headers: {
-              'x-api-key': this.apiKey, // Use your actual API key
+              'x-api-key': process.env.PGTOKEN, // Use your actual API key
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ prompt: `${lastUserMessageContent}`, detect: true }),
@@ -1275,36 +1275,47 @@ for (let i = messages.length - 1; i >= 0; i--) {
         }
       }
 
-      if (
-        this.options.piiCheckbox == "Block"
-      ) {
+      if (this.options.piiCheckbox === "Block") {
         try {
-          PiiBlock = false
+          PiiBlock = false;
+      
+          // Define a unique delimiter that is unlikely to appear in the content
+          const delimiter = '__UNIQUE_DELIMITER__';
+      
+          // Combine all messages in the payload into a single string
+          const combinedPayload = payload
+            .map(message => `${message.role}: ${message.content}`)
+            .join(delimiter);
+      
           const completionResponse = await fetch('https://api.predictionguard.com/completions', {
             method: 'POST',
             headers: {
-              'x-api-key': this.apiKey, // Use your actual API key
+              'x-api-key': process.env.PGTOKEN, // Use your actual API key
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
               model: 'Nous-Hermes-Llama2-13B',
-              prompt: `${lastUserMessageContent}`,
+              prompt: combinedPayload,  // Use the combined payload as the prompt
               max_tokens: 100,
               temperature: 0.7,
               top_p: 0.9,
               input: { pii: 'block' },
             }),
           });
-        
+      
           const completionData = await completionResponse.json();
+      
+          // Check the PII block status
           PiiBlock = completionData.choices[0].status.includes('personal');
+      
         } catch (error) {
           console.error('Error fetching PII status:', error);
-          PiiBlock = null; // Or handle the error as appropriate
-        } }
+          PiiBlock = null; // Handle the error as appropriate
+        }
+      }
 
 
-
+        let includeInput = false
 
       if (modelOptions.stream) {
         if (this.options.max_tokens) {
@@ -1313,9 +1324,73 @@ for (let i = messages.length - 1; i >= 0; i--) {
           modelOptions.max_tokens = 1000
         }
         const allowedPiiValues = ['Mask', 'Fake', 'Category', 'Random'];
+        if (this.options.endpoint.includes("Models") || this.options.endpoint.includes("PredictionGuard")) {
+         includeInput = allowedPiiValues.includes(this.options.piiCheckbox);
+        if (this.options.endpoint.includes("OpenAI")) {
+          includeInput = false
+        }
+        }
 
-        const includeInput = allowedPiiValues.includes(this.options.piiCheckbox);
+        // Jank way to do it with OpenAI calls
+        if (allowedPiiValues.includes(this.options.piiCheckbox) && includeInput === false) {
+          try {
+            PiiBlock = false;
+            const replaceMethod = this.options.piiCheckbox.toLowerCase(); // Convert to lowercase if needed
+        
+            // Define a unique delimiter that is unlikely to appear in the content
+            const delimiter = '__UNIQUE_DELIMITER__';
+        
+            // Combine all user messages into a single prompt, separated by the unique delimiter
+            const combinedPrompt = payload
+              .filter(message => message.role === 'user')
+              .map(message => message.content)
+              .join(delimiter);
+        
+            // Send the combined prompt to the PII API for replacement
+            const completionResponse = await fetch('https://api.predictionguard.com/PII', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.PGTOKEN}`, // Use your actual API token
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                prompt: combinedPrompt,
+                replace: true,
+                replace_method: replaceMethod
+              }),
+            });
+        
+            // Parse the JSON response
+            const responseData = await completionResponse.json();
+        
+            // Extract the new_prompt from the response
+            const newPrompt = responseData.checks[0].new_prompt;
+        
+            if (newPrompt) {
+              // Split the new prompt back into individual messages using the unique delimiter
+              const newMessages = newPrompt.split(delimiter);
+        
+              // Replace the content in the original payload with the new messages
+              let newMessageIndex = 0;
+              for (let i = 0; i < payload.length; i++) {
+                if (payload[i].role === 'user' && newMessageIndex < newMessages.length) {
+                  payload[i].content = newMessages[newMessageIndex++];
+                }
+              }
+            }
+        
+            // Reformat the payload if needed (example: trimming or restructuring)
+            // console.log('Updated Payload:', payload);
+        
+          } catch (error) {
+            console.error('Error:', error);
+          }
+        } else {
+          console.error('The selected PII method is not allowed.');
+        }
+        
 
+  
         const stream = await openai.beta.chat.completions
         .stream({
           ...modelOptions,
@@ -1351,7 +1426,7 @@ for (let i = messages.length - 1; i >= 0; i--) {
           });
 
         const azureDelay = this.modelOptions.model?.includes('gpt-4') ? 30 : 17;
-        console.log(PiiBlock)
+        // console.log(PiiBlock)
 
 
         if (inject > 0.7) {
