@@ -1324,7 +1324,7 @@ for (let i = messages.length - 1; i >= 0; i--) {
           modelOptions.max_tokens = 1000
         }
         const allowedPiiValues = ['Mask', 'Fake', 'Category', 'Random'];
-        if (this.options.endpoint.includes("Models") || this.options.endpoint.includes("PredictionGuard")) {
+        if (this.options.endpoint.includes("Chat") || this.options.endpoint.includes("Coding") ||("PredictionGuard")) {
          includeInput = allowedPiiValues.includes(this.options.piiCheckbox);
         if (this.options.endpoint.includes("OpenAI")) {
           includeInput = false
