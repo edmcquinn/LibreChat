@@ -1251,9 +1251,14 @@ for (let i = messages.length - 1; i >= 0; i--) {
   }
 }
 
+//Start PG Code
+
       let blockPromptInject = this.options.injectCheckbox
       let inject = 0
       let PiiBlock = false
+
+//PG - Block Prompt Inject
+
       if (
         blockPromptInject == true
       ) {
@@ -1274,7 +1279,7 @@ for (let i = messages.length - 1; i >= 0; i--) {
           inject = null; // Or handle the error as appropriate
         }
       }
-
+//PG - Block PII
       if (this.options.piiCheckbox === "Block") {
         try {
           PiiBlock = false;
@@ -1331,7 +1336,7 @@ for (let i = messages.length - 1; i >= 0; i--) {
         }
         }
 
-        // Jank way to do it with OpenAI calls
+        // PG - Jank way to do PII with external endpoints (for example OPENAI or Claude)
         if (allowedPiiValues.includes(this.options.piiCheckbox) && includeInput === false) {
           try {
             PiiBlock = false;
@@ -1397,6 +1402,7 @@ for (let i = messages.length - 1; i >= 0; i--) {
           stream: true,
           ...(includeInput ? {
             input: {
+              //PG - PII options when using a Prediction Guard Endpoint
               "pii": "replace",
               "pii_replace_method": this.options.piiCheckbox.toLowerCase()
             }
@@ -1427,9 +1433,8 @@ for (let i = messages.length - 1; i >= 0; i--) {
 
         const azureDelay = this.modelOptions.model?.includes('gpt-4') ? 30 : 17;
         // console.log(PiiBlock)
-
-
-        if (inject > 0.7) {
+        //Block PII and Prompt Injection Message
+        if (inject > 0.49) {
           intermediateReply = "⚠️ System Message: Prompt Injection Detected. Please rewrite prompt or turn off Prompt Injection Detection in the conversation settings ⚠️"
           return intermediateReply
         } else if (PiiBlock) {

@@ -483,7 +483,7 @@ class BaseClient {
     this.abortController.requestCompleted = true;
 
 
-        //Prediction Guard Toxicity Call
+        //PG Toxicity Call
         if (
           completion &&
           this.options.toxicityCheckbox 
@@ -505,7 +505,7 @@ class BaseClient {
             toxicity = null; // Or handle the error as appropriate
           }
         }
-        //Prediction Guard Factuality Call
+        //PG Factuality Call
         if (
           completion &&
           this.options.factualityCheckbox &&
