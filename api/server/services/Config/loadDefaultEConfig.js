@@ -13,7 +13,7 @@ async function loadDefaultEndpointsConfig(req) {
     config;
 
     let enabledEndpoints = [
-    
+      // EModelEndpoint.openAI,
   ];
 
   const endpointConfig = {

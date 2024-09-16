@@ -116,7 +116,7 @@ export default function Conversation({ conversation, retainView }) {
 
   return (
     <a data-testid="convo-item" onClick={() => clickHandler()} {...aProps}>
-      {icon}
+      {icon} 
       <div className="relative max-h-5 flex-1 overflow-hidden text-ellipsis break-all">
         {renaming === true ? (
           <input

@@ -477,20 +477,22 @@ class BaseClient {
     let consistency = null;
     let factuality = null;
 
+    
+
     const completion = await this.sendCompletion(payload, opts);
     this.abortController.requestCompleted = true;
 
-        //Prediction Guard Toxicity Call
+
+        //PG Toxicity Call
         if (
           completion &&
-          this.options.toxicityCheckbox &&
-          this.options.endpoint === 'PredictionGuard'
+          this.options.toxicityCheckbox 
         ) {
           try {
             const toxicityResponse = await fetch('https://api.predictionguard.com/toxicity', {
               method: 'POST',
               headers: {
-                'x-api-key': this.apiKey, // Use your actual API key
+                'x-api-key': process.env.PGTOKEN, // Use your actual API key
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({ text: completion }),
@@ -503,18 +505,16 @@ class BaseClient {
             toxicity = null; // Or handle the error as appropriate
           }
         }
-        //Prediction Guard Factuality Call
+        //PG Factuality Call
         if (
           completion &&
           this.options.factualityCheckbox &&
-          this.options.factualityText &&
-          this.options.endpoint === 'PredictionGuard'
-        ) {
+          this.options.factualityText) {
           try {
             const factualityResponse = await fetch('https://api.predictionguard.com/factuality', {
               method: 'POST',
               headers: {
-                'x-api-key': this.apiKey, // Use your actual API key
+                'x-api-key': process.env.PGTOKEN, // Use your actual API key
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({ text: completion, reference: this.options.factualityText }),
@@ -528,6 +528,7 @@ class BaseClient {
           }
         }
 
+        
     const responseMessage = {
       messageId: responseMessageId,
       conversationId,

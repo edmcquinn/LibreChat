@@ -38,6 +38,8 @@ export type TEndpointOption = {
   toxicityCheckbox?: boolean; // Checkbox for toxicity
   consistencyCheckbox?: boolean; // Checkbox for consistency
   factualityCheckbox?: boolean; // Checkbox for factuality
+  injectCheckbox?: boolean; // Checkbox for Prompt Injection
+  piiCheckbox?: string | null; // Checkbox for PII
   factualityText?: string; // Checkbox for factuality
   max_tokens?: number; // max_tokens override for PG
 };

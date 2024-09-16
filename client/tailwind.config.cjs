@@ -75,6 +75,7 @@ module.exports = {
         'border-medium': 'var(--gray-200)',
         'border-heavy': 'var(--gray-300)',
         'border-xheavy': 'var(--gray-400',
+        'custom-red': '#FF756C',
       },
     },
   },

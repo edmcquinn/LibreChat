@@ -120,9 +120,16 @@ const conversationPreset = {
   factualityCheckbox: {
     type: Boolean,
   },
+  injectCheckbox: {
+    type: Boolean,
+  },
   factualityText: {
     type: String,
   },
+  piiCheckbox: {
+    type: String,
+  },
+  
 };
 
 const agentOptions = {
@@ -190,6 +197,12 @@ const agentOptions = {
   },
   factualityCheckbox: {
     type: Boolean,
+  },
+  injectCheckbox: {
+    type: Boolean,
+  },
+  piiCheckbox: {
+    type: String,
   },
   factualityText: {
     type: String,
