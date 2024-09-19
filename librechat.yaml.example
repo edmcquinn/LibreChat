@@ -70,34 +70,34 @@ endpoints:
   #   capabilities: ["code_interpreter", "retrieval", "actions", "tools", "image_vision"]
   custom:
     # Prediction Guard Example - 
-    - name: 'Chat Models' #This must contain the word "Models" or be PredictionGuard
+    - name: 'Chat Models' #This must contain the word "Models" or be "PredictionGuard"
       apiKey: '${PGTOKEN}'
-      baseURL: 'https://api.predictionguard.com'
+      baseURL: 'https://api.predictionguard.com' #CHANGE THIS IF YOU HAVE A CUSTOM API ENDPOINT
       iconURL: https://publicpgdocimages.s3.us-east-1.amazonaws.com/pglogo.svg  #Change this to change the image used for the models
-      models:
-        default:
+      models: 
+        default: #Update these as new Chat model come out from Prediction Guard
           [
             'Hermes-2-Pro-Llama-3-8B',
             'Hermes-2-Pro-Mistral-7B',
             'Neural-Chat-7B',
           ]
-        fetch: false # Assuming model fetching is not supported
-      titleConvo: true # Assuming title conversation feature is not supported
-      titleModel: 'Hermes-2-Pro-Llama-3-8B' # No title model as titleConvo is false
-      summarize: false # Assuming summarization feature is not supported
+        fetch: false # Model fetching is not supported currently 
+      titleConvo: true # 
+      titleModel: 'Hermes-2-Pro-Llama-3-8B' 
+      summarize: false # feature is not supported
       summaryModel: '' # No summary model as summarize is false
       forcePrompt: false # Assuming forcePrompt is not necessary
-      modelDisplayLabel: 'CV Chat' # Display label for the model
+      modelDisplayLabel: 'Private Chat' # Change this to be whatever you want
       stream: true
       headers:
         Content-Type: 'application/json'
         User-Agent: "Prediction Guard Chat: CHAT"
     - name: 'Coding Models' #This must contain the word "Models" or be PredictionGuard
       apiKey: '${PGTOKEN}'
-      baseURL: 'https://api.predictionguard.com' #please point to the API either api.predictionguard.com or your custom tenent api url 
+      baseURL: 'https://api.predictionguard.com' #CHANGE THIS IF USING CUSTOM ENDPOINT
       iconURL: https://publicpgdocimages.s3.us-east-1.amazonaws.com/pglogo.svg #Change this to change the image used for the models
       models:
-        default:
+        default: #Update these as new Chat model come out from Prediction Guard
           [
             'llama-3-sqlcoder-8b',
             'deepseek-coder-6.7b-instruct'
@@ -108,26 +108,7 @@ endpoints:
       summarize: false # Assuming summarization feature is not supported
       summaryModel: '' # No summary model as summarize is false
       forcePrompt: false # Assuming forcePrompt is not necessary
-      modelDisplayLabel: 'CV Chat' # Display label for the model - Change this to change the presaved text in the chat text box and bot name.
-      stream: true
-      headers:
-        Content-Type: 'application/json'
-    - name: 'OpenAI Models'
-      apiKey: '${PGTOKEN}'
-      baseURL: 'https://api.openai.com/v1'
-      iconURL: https://publicpgdocimages.s3.us-east-1.amazonaws.com/pglogo.svg #Change this to change the image used for the models
-      models:
-        default:
-          [
-            'gpt-4o',
-          ]
-        fetch: false # Assuming model fetching is not supported
-      titleConvo: false # Assuming title conversation feature is not supported
-      titleModel: 'gpt-4o' # No title model as titleConvo is false
-      summarize: false # Assuming summarization feature is not supported
-      summaryModel: '' # No summary model as summarize is false
-      forcePrompt: false # Assuming forcePrompt is not necessary
-      modelDisplayLabel: 'CV Chat' # Display label for the model
+      modelDisplayLabel: 'Private Chat' # Display label for the model - Change this to change the presaved text in the chat text box and bot name.
       stream: true
       headers:
         Content-Type: 'application/json'
