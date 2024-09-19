@@ -1,3 +1,5 @@
+
+
 1. Create Virtual Machine:
 
 A. Choose Ubuntu Server 22.04 LTS - x64 Gen2
