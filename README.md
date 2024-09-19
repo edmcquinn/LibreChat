@@ -1,4 +1,3 @@
-
 1. Create Virtual Machine
 
 A. Choose Ubuntu Server 22.04 LTS - x64 Gen2
@@ -196,3 +195,4 @@ docker compose up
 You should now be able to see your chat at the domain specified in your Caddyfile. Be sure to close port 22 for security once setup is complete.
 
 
+That's it! You should now be able to see your Chat at the domain you specified in your caddy file. Be sure to close port 22 after you are done setting up for security.  
