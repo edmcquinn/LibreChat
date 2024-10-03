@@ -1530,7 +1530,7 @@ for (let i = messages.length - 1; i >= 0; i--) {
           throw err;
         }
       } else {
-        logger.error('[OpenAIClient.chatCompletion] Unhandled error type', err);
+        logger.error('[OpenAIClient.chatCompletion] Unhandled error type', err, err.message);
         throw err;
       }
     }

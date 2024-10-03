@@ -97,7 +97,7 @@ class RunManager {
       run_id,
       {},
       {
-        timeout: 3000,
+        timeout: 6000,
         maxRetries: 5,
       },
     );
