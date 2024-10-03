@@ -1280,44 +1280,58 @@ for (let i = messages.length - 1; i >= 0; i--) {
         }
       }
 //PG - Block PII
-      if (this.options.piiCheckbox === "Block") {
-        try {
-          PiiBlock = false;
-      
-          // Define a unique delimiter that is unlikely to appear in the content
-          const delimiter = '__UNIQUE_DELIMITER__';
-      
-          // Combine all messages in the payload into a single string
-          const combinedPayload = payload
-            .map(message => `${message.role}: ${message.content}`)
-            .join(delimiter);
-      
-          const completionResponse = await fetch('https://api.predictionguard.com/completions', {
-            method: 'POST',
-            headers: {
-              'x-api-key': process.env.PGTOKEN, // Use your actual API key
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'Nous-Hermes-Llama2-13B',
-              prompt: combinedPayload,  // Use the combined payload as the prompt
-              max_tokens: 100,
-              temperature: 0.7,
-              top_p: 0.9,
-              input: { pii: 'block' },
-            }),
-          });
-      
-          const completionData = await completionResponse.json();
-      
-          // Check the PII block status
-          PiiBlock = completionData.choices[0].status.includes('personal');
-      
-        } catch (error) {
-          console.error('Error fetching PII status:', error);
-          PiiBlock = null; // Handle the error as appropriate
+if (this.options.piiCheckbox === "Block") {
+  try {
+    PiiBlock = false;
+
+    const completionResponse = await fetch('https://api.predictionguard.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.PGTOKEN}`, // Use your actual API key
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'Neural-Chat-7B',  // Use your chosen model
+        messages: [
+          {
+            role: 'user',
+            content: `${lastUserMessageContent}`,  // User message content as input
+          }
+        ],
+        max_tokens: 1,
+        temperature: 1,
+        top_p: 1,
+        top_k: 50,
+        input: {
+          pii: 'block'  // Block PII as per your request
         }
+      })
+    });
+
+    // Check if the status code is not 200 (success)
+    if (!completionResponse.ok) {
+      console.error(`Error: Received status ${completionResponse.status}`);
+      
+      // Handle 400 Bad Request error
+      if (completionResponse.status === 400) {
+        console.error('400 Bad Request error encountered.');
+        PiiBlock = true;  // Set PiiBlock as true for 400 error
+      } else {
+        PiiBlock = false;  // Handle other types of errors
       }
+      
+    }
+
+    // Handle successful response here (e.g., logging or processing)
+    const data = await completionResponse.json();
+    console.log(data);
+
+  } catch (error) {
+    console.error('An error occurred while processing the request:', error);
+    PiiBlock = false;  // Set PiiBlock in case of any error
+  }
+}
+
 
 
         let includeInput = false
