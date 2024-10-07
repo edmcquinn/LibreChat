@@ -119,9 +119,25 @@ const handleAbortError = async (res, req, error, data) => {
     );
   }
 
-  const errorText = error?.message?.includes('"type"')
-    ? error.message
-    : 'An error occurred while processing your request. Please contact the Admin.';
+
+  const errorText = error?.response?.status === 401 || error?.message?.toLowerCase().includes('api key')
+  ? 'Incorrect API Key, please contact your Admin'
+  : error?.message?.includes('Total tokens still exceed the limit after truncation')
+      ? (() => {
+          const match = error.message.match(/Total tokens still exceed the limit after truncation: (\d+), Max allowed tokens: (\d+)/);
+          if (match) {
+            const totalTokens = match[1];
+            const maxTokens = match[2];
+            return `The request could not be processed: Total tokens (${totalTokens}) exceed the maximum allowed tokens (${maxTokens}). Please reduce the length of your request and try again.`;
+          }
+          return 'The request could not be processed due to exceeding the token limit. Please try again.';
+        })()
+  : error?.message?.includes('"type"')
+      ? error.message
+  : 'We encountered an issue processing your request. Please try again, or feel free to start a new chat.';
+
+
+
 
   const respondWithError = async (partialText) => {
     let options = {

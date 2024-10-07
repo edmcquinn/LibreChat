@@ -469,23 +469,25 @@ class OpenAIClient extends BaseClient {
       parentMessageId,
       summary: this.shouldSummarize,
     });
+  
     if (!isChatCompletion) {
       return await this.buildPrompt(orderedMessages, {
         isChatGptModel: isChatCompletion,
         promptPrefix,
       });
     }
-
+  
     let payload;
     let instructions;
     let tokenCountMap;
     let promptTokens;
-
+  
     promptPrefix = (promptPrefix || this.options.promptPrefix || '').trim();
-
+  
+    // Attachments handling
     if (this.options.attachments) {
       const attachments = await this.options.attachments;
-
+  
       if (this.message_file_map) {
         this.message_file_map[orderedMessages[orderedMessages.length - 1].messageId] = attachments;
       } else {
@@ -493,37 +495,36 @@ class OpenAIClient extends BaseClient {
           [orderedMessages[orderedMessages.length - 1].messageId]: attachments,
         };
       }
-
+  
       const files = await this.addImageURLs(
         orderedMessages[orderedMessages.length - 1],
         attachments,
       );
-
+  
       this.options.attachments = files;
     }
-
+  
     if (this.message_file_map) {
       this.contextHandlers = createContextHandlers(
         this.options.req,
         orderedMessages[orderedMessages.length - 1].text,
       );
     }
-
-    const formattedMessages = orderedMessages.map((message, i) => {
+  
+    // **Step 1: Calculate token counts without formatting**
+    orderedMessages.forEach((message, i) => {
       const formattedMessage = formatMessage({
         message,
         userName: this.options?.name,
         assistantName: this.options?.chatGptLabel,
       });
-
-      const needsTokenCount = this.contextStrategy && !orderedMessages[i].tokenCount;
-
-      /* If tokens were never counted, or, is a Vision request and the message has files, count again */
+  
+      const needsTokenCount = this.contextStrategy && !message.tokenCount;
+  
       if (needsTokenCount || (this.isVisionModel && (message.image_urls || message.files))) {
-        orderedMessages[i].tokenCount = this.getTokenCountForMessage(formattedMessage);
+        message.tokenCount = this.getTokenCountForMessage(formattedMessage);
       }
-
-      /* If message has files, calculate image token cost */
+  
       if (this.message_file_map && this.message_file_map[message.messageId]) {
         const attachments = this.message_file_map[message.messageId];
         for (const file of attachments) {
@@ -531,23 +532,60 @@ class OpenAIClient extends BaseClient {
             this.contextHandlers?.processFile(file);
             continue;
           }
-
-          orderedMessages[i].tokenCount += this.calculateImageTokenCost({
+  
+          message.tokenCount += this.calculateImageTokenCost({
             width: file.width,
             height: file.height,
             detail: this.options.imageDetail ?? ImageDetail.auto,
           });
         }
       }
-
-      return formattedMessage;
     });
-
+  
+    // **Step 2: Calculate total tokens and apply truncation if needed**
+    const maxTokens = this.options.maxTokens || 4096; // Assuming max tokens limit
+    const conservativeLimit = maxTokens - 250; // Apply a leeway
+    let totalTokens = promptPrefix ? this.getTokenCountForMessage({ content: promptPrefix }) : 0;
+  
+    totalTokens += orderedMessages.reduce((count, message) => {
+      return count + message.tokenCount;
+    }, 0);
+  
+    // Truncate messages if total tokens exceed the conservative limit
+    const truncatedMessages = [];
+    while (totalTokens > conservativeLimit && orderedMessages.length > 1) {
+      const removedMessage = orderedMessages.shift();
+      totalTokens -= removedMessage.tokenCount;
+      truncatedMessages.push(removedMessage);
+    }
+  
+    if (totalTokens > maxTokens) {
+      throw new Error(
+        `Total tokens still exceed the limit after truncation: ${totalTokens}, Max allowed tokens: ${conservativeLimit}`,
+      );
+    }
+  
+    if (truncatedMessages.length > 0) {
+      truncatedMessages.forEach((message, index) => {
+        console.log(`Truncated message ${index + 1}:`, message);
+      });
+    }
+  
+    // **Step 3: Format messages after truncation**
+    const formattedMessages = orderedMessages.map((message) => {
+      return formatMessage({
+        message,
+        userName: this.options?.name,
+        assistantName: this.options?.chatGptLabel,
+      });
+    });
+  
+    // If there is a context handler, create augmented prompt
     if (this.contextHandlers) {
       this.augmentedPrompt = await this.contextHandlers.createContext();
       promptPrefix = this.augmentedPrompt + promptPrefix;
     }
-
+  
     if (promptPrefix) {
       promptPrefix = `Instructions:\n${promptPrefix.trim()}`;
       instructions = {
@@ -555,39 +593,46 @@ class OpenAIClient extends BaseClient {
         name: 'instructions',
         content: promptPrefix,
       };
-
+  
       if (this.contextStrategy) {
         instructions.tokenCount = this.getTokenCountForMessage(instructions);
       }
     }
-
-    // TODO: need to handle interleaving instructions better
+  
+    // Handle context strategy
     if (this.contextStrategy) {
-      ({ payload, tokenCountMap, promptTokens, messages } = await this.handleContextStrategy({
+      ({
+        payload,
+        tokenCountMap,
+        promptTokens,
+        messages,
+      } = await this.handleContextStrategy({
         instructions,
         orderedMessages,
         formattedMessages,
       }));
     }
-
+  
     const result = {
       prompt: payload,
       promptTokens,
       messages,
     };
-
+  
     if (tokenCountMap) {
       tokenCountMap.instructions = instructions?.tokenCount;
       result.tokenCountMap = tokenCountMap;
     }
-
+  
     if (promptTokens >= 0 && typeof opts?.getReqData === 'function') {
       opts.getReqData({ promptTokens });
     }
-
+  
     return result;
   }
+  
 
+  
   /** @type {sendCompletion} */
   async sendCompletion(payload, opts = {}) {
     let reply = '';
