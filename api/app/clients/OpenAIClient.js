@@ -541,10 +541,26 @@ class OpenAIClient extends BaseClient {
         }
       }
     });
-  
+
+    let maxTokens;
+    switch (this.modelOptions.model) {
+      case 'Hermes-3-Llama-3.1-70B':
+          this.options.maxContextTokens = 18432
+          maxTokens = 18432;
+          break;
+      case 'Hermes-3-Llama-3.1-8B':
+        this.options.maxContextTokens = 10240
+        maxTokens = 10240;
+          break;
+      default:
+          maxTokens = this.options.maxContextTokens || 4096; // Default or provided max tokens
+          break;
+  }
+
     // **Step 2: Calculate total tokens and apply truncation if needed**
-    const maxTokens = this.options.maxTokens || 4096; // Assuming max tokens limit
-    const conservativeLimit = maxTokens - 250; // Apply a leeway
+
+    const conservativeLimit = Math.floor(maxTokens * 0.91);
+ // Apply a leeway
     let totalTokens = promptPrefix ? this.getTokenCountForMessage({ content: promptPrefix }) : 0;
   
     totalTokens += orderedMessages.reduce((count, message) => {
@@ -559,7 +575,9 @@ class OpenAIClient extends BaseClient {
       truncatedMessages.push(removedMessage);
     }
   
-    if (totalTokens > maxTokens) {
+    console.log(this.options.maxContextTokens,conservativeLimit,totalTokens)
+
+    if (totalTokens > this.options.maxContextTokens) {
       throw new Error(
         `Total tokens still exceed the limit after truncation: ${totalTokens}, Max allowed tokens: ${conservativeLimit}`,
       );

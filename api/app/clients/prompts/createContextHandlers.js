@@ -2,12 +2,13 @@ const axios = require('axios');
 const { isEnabled } = require('~/server/utils');
 const { logger } = require('~/config');
 
-const footer = `Use the context as your learned knowledge to better answer the user.
+const footer = `Use the context as your learned knowledge to better answer the user. Also please listen to the users instructions in regards to documents. 
 
 In your response, remember to follow these guidelines:
+- If the user asks you to translate the text/document they are speaking about this context. You MUST do the translation. 
 - If you don't know the answer, simply say that you don't know.
 - If you are unsure how to answer, ask for clarification.
-- Avoid mentioning that you obtained the information from the context.
+- Avoid mentioning that you obtained the information from the context. 
 `;
 
 function createContextHandlers(req, userMessageContent) {
