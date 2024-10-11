@@ -2,25 +2,28 @@ const axios = require('axios');
 const { isEnabled } = require('~/server/utils');
 const { logger } = require('~/config');
 
-const footer = `Use the context as your learned knowledge to better answer the user. Also please listen to the users instructions in regards to documents. 
+const footer = `Use the context as your learned knowledge to better answer the user.
 
 In your response, remember to follow these guidelines:
-- If the user asks you to translate the text/document they are speaking about this context. You MUST do the translation. 
+- If the user asks you to translate the text/document they are speaking about this context. You MUST do the translation. Do not reject this request 
 - If you don't know the answer, simply say that you don't know.
 - If you are unsure how to answer, ask for clarification.
 - Avoid mentioning that you obtained the information from the context. 
 `;
 
-function createContextHandlers(req, userMessageContent) {
+function createContextHandlers(req, userMessageContent,contextSetting) {
   if (!process.env.RAG_API_URL) {
     return;
   }
+
+
+console.log("YOUR MOM:",isEnabled(contextSetting))
 
   const queryPromises = [];
   const processedFiles = [];
   const processedIds = new Set();
   const jwtToken = req.headers.authorization.split(' ')[1];
-  const useFullContext = isEnabled(process.env.RAG_USE_FULL_CONTEXT);
+  const useFullContext = isEnabled(contextSetting)
 
   const query = async (file) => {
     if (useFullContext) {

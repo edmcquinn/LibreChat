@@ -122,19 +122,22 @@ const handleAbortError = async (res, req, error, data) => {
 
   const errorText = error?.response?.status === 401 || error?.message?.toLowerCase().includes('api key')
   ? 'Incorrect API Key, please contact your Admin'
-  : error?.message?.includes('Total tokens still exceed the limit after truncation')
+  : error?.message?.includes('Cannot fit the instructions within the token limit')
       ? (() => {
-          const match = error.message.match(/Total tokens still exceed the limit after truncation: (\d+), Max allowed tokens: (\d+)/);
+          const match = error.message.match(/Max allowed tokens: (\d+), Instructions token count: (\d+), Remaining tokens: (\d+)/);
           if (match) {
-            const totalTokens = match[1];
-            const maxTokens = match[2];
-            return `The request could not be processed: Total tokens (${totalTokens}) exceed the maximum allowed tokens (${maxTokens}). Please reduce the length of your request and try again.`;
+            const maxTokens = match[1];
+            const totalTokens = match[2];
+            const remainingTokens = match[3];
+            return `Cannot fit the instructions within the token limit. If using the Send Full Document to Model Setting, please reduce the size of the file before uploading. If using standard file upload, please reduce the number of files you are using. Max allowed tokens: ${maxTokens}, Instructions token count: ${totalTokens}`;
           }
           return 'The request could not be processed due to exceeding the token limit. Please try again.';
         })()
   : error?.message?.includes('"type"')
       ? error.message
   : 'We encountered an issue processing your request. Please try again, or feel free to start a new chat.';
+
+
 
 
 

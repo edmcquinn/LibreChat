@@ -39,6 +39,7 @@ export type TEndpointOption = {
   consistencyCheckbox?: boolean; // Checkbox for consistency
   factualityCheckbox?: boolean; // Checkbox for factuality
   injectCheckbox?: boolean; // Checkbox for Prompt Injection
+  fullDocCheckbox?: boolean; // Checkbox for Full Doc Rag Checkbox
   piiCheckbox?: string | null; // Checkbox for PII
   factualityText?: string; // Checkbox for factuality
   max_tokens?: number; // max_tokens override for PG

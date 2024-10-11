@@ -41,6 +41,7 @@ export default function Settings({ conversation, setOption, models, readonly }: 
     factualityText,
     injectCheckbox,
     piiCheckbox,
+    fullDocCheckbox,
   } = conversation ?? {};
 
   const [setChatGptLabel, chatGptLabelValue] = useDebouncedInput<string | null | undefined>({
@@ -81,6 +82,7 @@ export default function Settings({ conversation, setOption, models, readonly }: 
   const setToxicity = setOption('toxicityCheckbox');
   const setFactuality = setOption('factualityCheckbox');
   const setInjection = setOption('injectCheckbox');
+  const setFullDoc = setOption('fullDocCheckbox');
   const setPII = setOption('piiCheckbox');
   const piiOptions = [
     { value: '', label: 'None' }, // Default blank option
@@ -178,6 +180,34 @@ export default function Settings({ conversation, setOption, models, readonly }: 
               />
             </div>
             <div className="grid w-full items-center gap-2">
+      <Label htmlFor="pii-dropdown" className="text-left text-sm font-medium flex items-center">
+        <small>PII Anonymization</small>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
+          </TooltipTrigger>
+          <TooltipContent>
+Choose an option for handling PII -
+Replace: This replaces detected PII with fake names or details.
+Block: This blocks the prompt containing PII from reaching the LLM.
+Random: This replaces the detected PII with random characters.
+Category: This masks the PII with the entity type.
+Mask: This simply replaces PII with asterisks (*)
+          </TooltipContent>
+        </Tooltip>
+      </Label>
+      <SelectDropDown
+        id="pii-dropdown"
+        value={piiCheckbox ?? ''}
+        setValue={setPII}
+        availableValues={piiOptions}
+        disabled={readonly}
+        className={cn(defaultTextProps, 'flex w-full resize-none', removeFocusRings)}
+        containerClassName="flex w-full resize-none"
+        title="Select PII Anonymization Option"
+      />
+    </div>
+            <div className="grid w-full items-center gap-2">
               <Label htmlFor="factualityText" className="text-left text-sm font-medium flex items-center">
                 Factuality Context
                 <small className="opacity-40">({localize('com_endpoint_default_blank')})</small>
@@ -210,7 +240,7 @@ export default function Settings({ conversation, setOption, models, readonly }: 
                   <TooltipTrigger asChild>
                     <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
                   </TooltipTrigger>
-                  <TooltipContent>Set the maximum number of output tokens. This controls the max output of the model to your question. This can cause truncation if it is set too low.</TooltipContent>
+                  <TooltipContent>Set the maximum number of output tokens. This controls the max output of the model to your question. This can cause truncation if it is set too low. The default is 1000</TooltipContent>
                 </Tooltip>
               </Label>
               <InputNumber
@@ -330,34 +360,25 @@ export default function Settings({ conversation, setOption, models, readonly }: 
                 className="flex"
               />
             </div>
+
             <div className="grid w-full items-center gap-2">
-      <Label htmlFor="pii-dropdown" className="text-left text-sm font-medium flex items-center">
-        <small>PII Anonymization</small>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
-          </TooltipTrigger>
-          <TooltipContent>
-Choose an option for handling PII -
-Replace: This replaces detected PII with fake names or details.
-Block: This blocks the prompt containing PII from reaching the LLM.
-Random: This replaces the detected PII with random characters.
-Category: This masks the PII with the entity type.
-Mask: This simply replaces PII with asterisks (*)
-          </TooltipContent>
-        </Tooltip>
-      </Label>
-      <SelectDropDown
-        id="pii-dropdown"
-        value={piiCheckbox ?? ''}
-        setValue={setPII}
-        availableValues={piiOptions}
-        disabled={readonly}
-        className={cn(defaultTextProps, 'flex w-full resize-none', removeFocusRings)}
-        containerClassName="flex w-full resize-none"
-        title="Select PII Anonymization Option"
-      />
-    </div>
+              <Label htmlFor="inject-checkbox" className="text-left text-sm font-medium flex items-center">
+                <small>Send Full Document to Model</small>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
+                  </TooltipTrigger>
+                  <TooltipContent>Checking this button overrides the default file upload behavior. Instead of using RAG, the full document will be sent directly to the model. Note that if the document exceeds the model's context length, it will result in an error. This option is best suited for single small documents.</TooltipContent>
+                </Tooltip>
+              </Label>
+              <Switch
+                id="inject-checkbox"
+                checked={fullDocCheckbox ?? false}
+                onCheckedChange={(checked: boolean) => setFullDoc(checked)}
+                disabled={readonly}
+                className="flex"
+              />
+            </div>
           </div>
         </div>
       ) : (

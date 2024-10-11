@@ -427,6 +427,7 @@ class OpenAIClient extends BaseClient {
       injectCheckbox: this.options.injectCheckbox,
       piiCheckbox: this.options.piiCheckbox,
       factualityText: this.options.factualityText,
+      fullDocCheckbox: this.options.fullDocCheckbox,
       spec: this.options.spec,
       ...this.modelOptions,
     };
@@ -482,7 +483,17 @@ class OpenAIClient extends BaseClient {
     let tokenCountMap;
     let promptTokens;
   
-    promptPrefix = (promptPrefix || this.options.promptPrefix || '').trim();
+    //Adding Safety Prompt - PG Code
+let safetyPrompt = process.env.SAFETY_PROMPT;
+
+// Adding Safety Prompt - PG Code
+if (safetyPrompt) {
+  promptPrefix = ((promptPrefix || this.options.promptPrefix || '').trim() + ' ' + safetyPrompt);
+} else {
+  promptPrefix = (promptPrefix || this.options.promptPrefix || '').trim();
+}
+
+
   
     // Attachments handling
     if (this.options.attachments) {
@@ -504,10 +515,12 @@ class OpenAIClient extends BaseClient {
       this.options.attachments = files;
     }
   
+    
+//Conditionally Turn on Send Full File - PG Code
     if (this.message_file_map) {
       this.contextHandlers = createContextHandlers(
         this.options.req,
-        orderedMessages[orderedMessages.length - 1].text,
+        orderedMessages[orderedMessages.length - 1].text, `${this.options.fullDocCheckbox}`
       );
     }
   
@@ -542,52 +555,38 @@ class OpenAIClient extends BaseClient {
       }
     });
 
-    let maxTokens;
-    switch (this.modelOptions.model) {
-      case 'Hermes-3-Llama-3.1-70B':
-          this.options.maxContextTokens = 18432
-          maxTokens = 18432;
-          break;
-      case 'Hermes-3-Llama-3.1-8B':
-        this.options.maxContextTokens = 10240
-        maxTokens = 10240;
-          break;
-      default:
-          maxTokens = this.options.maxContextTokens || 4096; // Default or provided max tokens
-          break;
-  }
 
-    // **Step 2: Calculate total tokens and apply truncation if needed**
+//     // **Step 2: Calculate total tokens and apply truncation if needed**
 
-    const conservativeLimit = Math.floor(maxTokens * 0.91);
- // Apply a leeway
-    let totalTokens = promptPrefix ? this.getTokenCountForMessage({ content: promptPrefix }) : 0;
+//     const conservativeLimit = Math.floor(maxTokens * 0.91);
+//  // Apply a leeway
+//     let totalTokens = promptPrefix ? this.getTokenCountForMessage({ content: promptPrefix }) : 0;
   
-    totalTokens += orderedMessages.reduce((count, message) => {
-      return count + message.tokenCount;
-    }, 0);
+//     totalTokens += orderedMessages.reduce((count, message) => {
+//       return count + message.tokenCount;
+//     }, 0);
   
-    // Truncate messages if total tokens exceed the conservative limit
-    const truncatedMessages = [];
-    while (totalTokens > conservativeLimit && orderedMessages.length > 1) {
-      const removedMessage = orderedMessages.shift();
-      totalTokens -= removedMessage.tokenCount;
-      truncatedMessages.push(removedMessage);
-    }
+//     // Truncate messages if total tokens exceed the conservative limit
+//     const truncatedMessages = [];
+//     while (totalTokens > conservativeLimit && orderedMessages.length > 1) {
+//       const removedMessage = orderedMessages.shift();
+//       totalTokens -= removedMessage.tokenCount;
+//       truncatedMessages.push(removedMessage);
+//     }
   
-    console.log(this.options.maxContextTokens,conservativeLimit,totalTokens)
 
-    if (totalTokens > this.options.maxContextTokens) {
-      throw new Error(
-        `Total tokens still exceed the limit after truncation: ${totalTokens}, Max allowed tokens: ${conservativeLimit}`,
-      );
-    }
+
+//     if (totalTokens > this.options.maxContextTokens) {
+//       throw new Error(
+//         `Total tokens still exceed the limit after truncation: ${totalTokens}, Max allowed tokens: ${conservativeLimit}`,
+//       );
+//     }
   
-    if (truncatedMessages.length > 0) {
-      truncatedMessages.forEach((message, index) => {
-        console.log(`Truncated message ${index + 1}:`, message);
-      });
-    }
+//     if (truncatedMessages.length > 0) {
+//       truncatedMessages.forEach((message, index) => {
+//         console.log(`Truncated message ${index + 1}:`, message);
+//       });
+//     }
   
     // **Step 3: Format messages after truncation**
     const formattedMessages = orderedMessages.map((message) => {
@@ -612,10 +611,14 @@ class OpenAIClient extends BaseClient {
         content: promptPrefix,
       };
   
+      const wordCount = promptPrefix.trim().split(/\s+/).length;
+console.log(wordCount);
       if (this.contextStrategy) {
         instructions.tokenCount = this.getTokenCountForMessage(instructions);
       }
     }
+
+
   
     // Handle context strategy
     if (this.contextStrategy) {
@@ -645,11 +648,11 @@ class OpenAIClient extends BaseClient {
     if (promptTokens >= 0 && typeof opts?.getReqData === 'function') {
       opts.getReqData({ promptTokens });
     }
-  
+    // console.log(this.options.maxContextTokens,conservativeLimit,totalTokens)
+    console.log("result:", result)
     return result;
   }
   
-
   
   /** @type {sendCompletion} */
   async sendCompletion(payload, opts = {}) {
@@ -735,6 +738,7 @@ class OpenAIClient extends BaseClient {
     return (reply ?? '').trim();
   }
 
+
   initializeLLM({
     model = 'gpt-3.5-turbo',
     modelName,
@@ -753,6 +757,7 @@ class OpenAIClient extends BaseClient {
     factualityText,
     injectCheckbox,
     piiCheckbox,
+    fullDocCheckbox,
   }) {
     const modelOptions = {
       modelName: modelName ?? model,
@@ -764,6 +769,7 @@ class OpenAIClient extends BaseClient {
       consistencyCheckbox,
       factualityCheckbox,
       injectCheckbox,
+      fullDocCheckbox,
       piiCheckbox,
       factualityText,
       max_tokens,
@@ -1326,7 +1332,7 @@ for (let i = messages.length - 1; i >= 0; i--) {
         blockPromptInject == true
       ) {
         try {
-          const injectResponse = await fetch('https://api.predictionguard.com/injection', {
+          const injectResponse = await fetch(`${process.env.PG_BASE_URL}/injection`, {
             method: 'POST',
             headers: {
               'x-api-key': process.env.PGTOKEN, // Use your actual API key
@@ -1347,7 +1353,7 @@ if (this.options.piiCheckbox === "Block") {
   try {
     PiiBlock = false;
 
-    const completionResponse = await fetch('https://api.predictionguard.com/chat/completions', {
+    const completionResponse = await fetch(`${process.env.PG_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.PGTOKEN}`, // Use your actual API key
@@ -1429,7 +1435,7 @@ if (this.options.piiCheckbox === "Block") {
               .join(delimiter);
         
             // Send the combined prompt to the PII API for replacement
-            const completionResponse = await fetch('https://api.predictionguard.com/PII', {
+            const completionResponse = await fetch(`${process.env.PG_BASE_URL}/PII`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${process.env.PGTOKEN}`, // Use your actual API token
@@ -1477,36 +1483,43 @@ if (this.options.piiCheckbox === "Block") {
         .stream({
           ...modelOptions,
           stream: true,
-          ...(includeInput ? {
-            input: {
-              //PG - PII options when using a Prediction Guard Endpoint
-              "pii": "replace",
-              "pii_replace_method": this.options.piiCheckbox.toLowerCase()
-            }
-          } : {})
+          ...(includeInput
+            ? {
+                input: {
+                  // PG - PII options when using a Prediction Guard Endpoint
+                  pii: 'replace',
+                  pii_replace_method: this.options.piiCheckbox.toLowerCase(),
+                },
+              }
+            : {}),
+          truncation_strategy: {
+            type: 'auto',
+            last_messages: 4, // Keep the last 1 message in case of token overflow
+          },
         })
-          .on('abort', () => {
-            /* Do nothing here */
-          })
-          .on('error', (err) => {
-            handleOpenAIErrors(err, errorCallback, 'stream');
-          })
-          .on('finalChatCompletion', (finalChatCompletion) => {
-            const finalMessage = finalChatCompletion?.choices?.[0]?.message;
-            if (finalMessage && finalMessage?.role !== 'assistant') {
-              finalChatCompletion.choices[0].message.role = 'assistant';
-            }
-
-            if (finalMessage && !finalMessage?.content?.trim()) {
-              finalChatCompletion.choices[0].message.content = intermediateReply;
-            }
-          })
-          .on('finalMessage', (message) => {
-            if (message?.role !== 'assistant') {
-              stream.messages.push({ role: 'assistant', content: intermediateReply });
-              UnexpectedRoleError = true;
-            }
-          });
+        .on('abort', () => {
+          /* Do nothing here */
+        })
+        .on('error', (err) => {
+          handleOpenAIErrors(err, errorCallback, 'stream');
+        })
+        .on('finalChatCompletion', (finalChatCompletion) => {
+          const finalMessage = finalChatCompletion?.choices?.[0]?.message;
+          if (finalMessage && finalMessage.role !== 'assistant') {
+            finalChatCompletion.choices[0].message.role = 'assistant';
+          }
+      
+          if (finalMessage && !finalMessage?.content?.trim()) {
+            finalChatCompletion.choices[0].message.content = intermediateReply;
+          }
+        })
+        .on('finalMessage', (message) => {
+          if (message?.role !== 'assistant') {
+            stream.messages.push({ role: 'assistant', content: intermediateReply });
+            UnexpectedRoleError = true;
+          }
+        });
+      
 
         const azureDelay = this.modelOptions.model?.includes('gpt-4') ? 30 : 17;
         // console.log(PiiBlock)
