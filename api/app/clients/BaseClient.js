@@ -295,130 +295,133 @@ class BaseClient {
     };
   }
 
-async handleContextStrategy({ instructions, orderedMessages, formattedMessages }) {
-  let _instructions;
-  let tokenCount;
-
-
-  switch (this.modelOptions.model) {
-    case 'Hermes-3-Llama-3.1-70B':
-      this.maxContextTokens = 18432
+  async handleContextStrategy({ instructions, orderedMessages, formattedMessages }) {
+    let _instructions;
+    let tokenCount;
+  
+    switch (this.modelOptions.model) {
+      case 'Hermes-3-Llama-3.1-70B':
+        this.maxContextTokens = 18432;
         break;
-    case 'Hermes-3-Llama-3.1-8B':
-      this.maxContextTokens = 10240
+      case 'Hermes-3-Llama-3.1-8B':
+        this.maxContextTokens = 10240;
         break;
-    default:
-      this.maxContextTokens = 4096; // Default or provided max tokens
+      default:
+        this.maxContextTokens = 4096; // Default or provided max tokens
         break;
-}
-
-  // Extract token count from instructions if available
-  if (instructions) {
-    ({ tokenCount, ..._instructions } = instructions);
-  }
-  _instructions && logger.debug('[BaseClient] instructions tokenCount: ' + tokenCount);
-
-  // Add instructions to the payload and ordered messages
-  let payload = this.addInstructions(formattedMessages, _instructions);
-  let orderedWithInstructions = this.addInstructions(orderedMessages, instructions);
-
-  // Get context within token limits
-  let { context, remainingContextTokens, messagesToRefine, summaryIndex } =
-    await this.getMessagesWithinTokenLimit(orderedWithInstructions);
-
-  logger.debug('[BaseClient] Context Count (1/2)', {
-    remainingContextTokens,
-    maxContextTokens: this.maxContextTokens,
-  });
-
-  let summaryMessage;
-  let summaryTokenCount;
-  let { shouldSummarize } = this;
-
-  // Calculate the difference in length to determine how many messages were discarded
-  const { length } = payload;
-  const diff = length - context.length;
-  const firstMessage = orderedWithInstructions[0];
-  const usePrevSummary =
-    shouldSummarize &&
-    diff === 1 &&
-    firstMessage?.summary &&
-    this.previous_summary.messageId === firstMessage.messageId;
-
-  // If there's a difference, truncate the payload
-  if (diff > 0) {
-    payload = payload.slice(diff);
-    logger.debug(
-      `[BaseClient] Difference between original payload (${length}) and context (${context.length}): ${diff}`,
-    );
-  }
-
-  const latestMessage = orderedWithInstructions[orderedWithInstructions.length - 1];
-
-  // If payload is empty and no summarization is required, throw an error
-  if (payload.length === 0 && !shouldSummarize && latestMessage) {
-    throw new Error(
-      `Prompt token count of ${latestMessage.tokenCount} exceeds max token count of ${this.maxContextTokens}.`,
-    );
-  }
-
-  // NEW LOGIC: Check if only the instructions would need to be cut to fit within the token limit
-  const totalInstructionsTokenCount = _instructions ? this.getTokenCountForMessage(_instructions) : 0;
-  const totalContextTokenCount = context.reduce((acc, message) => acc + message.tokenCount, 0);
-
-  if (remainingContextTokens < totalInstructionsTokenCount && totalContextTokenCount <= this.maxContextTokens) {
-    throw new Error(
-      `Cannot fit the instructions within the token limit. Max allowed tokens: ${this.maxContextTokens}, Instructions token count: ${totalInstructionsTokenCount}, Remaining tokens: ${remainingContextTokens}`
-    );
-  }
-
-  // Continue with summarization logic if applicable
-  if (usePrevSummary) {
-    summaryMessage = { role: 'system', content: firstMessage.summary };
-    summaryTokenCount = firstMessage.summaryTokenCount;
-    payload.unshift(summaryMessage);
-    remainingContextTokens -= summaryTokenCount;
-  } else if (shouldSummarize && messagesToRefine.length > 0) {
-    ({ summaryMessage, summaryTokenCount } = await this.summarizeMessages({
-      messagesToRefine,
+    }
+  
+    // Extract token count from instructions if available
+    if (instructions) {
+      ({ tokenCount, ..._instructions } = instructions);
+    }
+    _instructions && logger.debug('[BaseClient] instructions tokenCount: ' + tokenCount);
+  
+    // Add instructions to the payload and ordered messages
+    let payload = this.addInstructions(formattedMessages, _instructions);
+    let orderedWithInstructions = this.addInstructions(orderedMessages, instructions);
+  
+    // Get context within token limits
+    let { context, remainingContextTokens, messagesToRefine, summaryIndex } =
+      await this.getMessagesWithinTokenLimit(orderedWithInstructions);
+  
+    logger.debug('[BaseClient] Context Count (1/2)', {
       remainingContextTokens,
-    }));
-    summaryMessage && payload.unshift(summaryMessage);
-    remainingContextTokens -= summaryTokenCount;
-  }
+      maxContextTokens: this.maxContextTokens,
+    });
+  
+    let summaryMessage;
+    let summaryTokenCount;
+    let { shouldSummarize } = this;
+  
+    // Calculate the difference in length to determine how many messages were discarded
+    const { length } = payload;
+    const diff = length - context.length;
+    const firstMessage = orderedWithInstructions[0];
+    const usePrevSummary =
+      shouldSummarize &&
+      diff === 1 &&
+      firstMessage?.summary &&
+      this.previous_summary.messageId === firstMessage.messageId;
+  
+    // If there's a difference, truncate the payload
+    if (diff > 0) {
+      payload = payload.slice(diff);
+      logger.debug(
+        `[BaseClient] Difference between original payload (${length}) and context (${context.length}): ${diff}`,
+      );
+    }
+  
+    const latestMessage = orderedWithInstructions[orderedWithInstructions.length - 1];
+  
+    // If payload is empty and no summarization is required, throw an error
+    if (payload.length === 0 && !shouldSummarize && latestMessage) {
+      throw new Error(
+        `Prompt token count of ${latestMessage.tokenCount} exceeds max token count of ${this.maxContextTokens}.`
+      );
+    }
+  
+    // NEW LOGIC: Ensure the instructions fit within the remaining token limit
+    const totalInstructionsTokenCount = _instructions ? this.getTokenCountForMessage(_instructions) : 0;
+    const totalContextTokenCount = context.reduce((acc, message) => acc + message.tokenCount, 0);
+  
+    // Error out if the instructions exceed the limit and cannot fit
+    if (totalInstructionsTokenCount > this.maxContextTokens) {
+      throw new Error(
+        `Cannot fit the instructions within the token limit. Max allowed tokens: ${this.maxContextTokens}, Instructions token count: ${totalInstructionsTokenCount}, Context token count: ${totalContextTokenCount}`
+      );
+    }
+  
 
-  // Final logging and return statement
-  logger.debug('[BaseClient] Context Count (2/2)', {
-    remainingContextTokens,
-    maxContextTokens: this.maxContextTokens,
-  });
-
-  let tokenCountMap = orderedWithInstructions.reduce((map, message, index) => {
-    const { messageId } = message;
-    if (!messageId) {
+  
+    // Continue with summarization logic if applicable
+    if (usePrevSummary) {
+      summaryMessage = { role: 'system', content: firstMessage.summary };
+      summaryTokenCount = firstMessage.summaryTokenCount;
+      payload.unshift(summaryMessage);
+      remainingContextTokens -= summaryTokenCount;
+    } else if (shouldSummarize && messagesToRefine.length > 0) {
+      ({ summaryMessage, summaryTokenCount } = await this.summarizeMessages({
+        messagesToRefine,
+        remainingContextTokens,
+      }));
+      summaryMessage && payload.unshift(summaryMessage);
+      remainingContextTokens -= summaryTokenCount;
+    }
+  
+    // Final logging and return statement
+    logger.debug('[BaseClient] Context Count (2/2)', {
+      remainingContextTokens,
+      maxContextTokens: this.maxContextTokens,
+    });
+  
+    let tokenCountMap = orderedWithInstructions.reduce((map, message, index) => {
+      const { messageId } = message;
+      if (!messageId) {
+        return map;
+      }
+  
+      if (shouldSummarize && index === summaryIndex && !usePrevSummary) {
+        map.summaryMessage = { ...summaryMessage, messageId, tokenCount: summaryTokenCount };
+      }
+  
+      map[messageId] = orderedWithInstructions[index].tokenCount;
       return map;
-    }
-
-    if (shouldSummarize && index === summaryIndex && !usePrevSummary) {
-      map.summaryMessage = { ...summaryMessage, messageId, tokenCount: summaryTokenCount };
-    }
-
-    map[messageId] = orderedWithInstructions[index].tokenCount;
-    return map;
-  }, {});
-
-  const promptTokens = this.maxContextTokens - remainingContextTokens;
-
-  logger.debug('[BaseClient] tokenCountMap:', tokenCountMap);
-  logger.debug('[BaseClient]', {
-    promptTokens,
-    remainingContextTokens,
-    payloadSize: payload.length,
-    maxContextTokens: this.maxContextTokens,
-  });
-
-  return { payload, tokenCountMap, promptTokens, messages: orderedWithInstructions };
-}
+    }, {});
+  
+    const promptTokens = this.maxContextTokens - remainingContextTokens;
+  
+    logger.debug('[BaseClient] tokenCountMap:', tokenCountMap);
+    logger.debug('[BaseClient]', {
+      promptTokens,
+      remainingContextTokens,
+      payloadSize: payload.length,
+      maxContextTokens: this.maxContextTokens,
+    });
+  
+    return { payload, tokenCountMap, promptTokens, messages: orderedWithInstructions };
+  }
+  
 
 
   async sendMessage(message, opts = {}) {
