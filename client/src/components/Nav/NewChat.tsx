@@ -17,7 +17,7 @@ const NewChatButtonIcon = ({ conversation }: { conversation: TConversation | nul
 
   if (searchQuery) {
     return (
-      <div className="shadow-stroke relative flex h-7 w-7 items-center justify-center rounded-full bg-white text-black dark:bg-white">
+      <div className="relative flex h-7 w-7 items-center justify-center rounded-full bg-white text-black dark:bg-white">
         <Search className="h-5 w-5" />
       </div>
     );
@@ -37,7 +37,7 @@ const NewChatButtonIcon = ({ conversation }: { conversation: TConversation | nul
       {iconURL && iconURL.includes('http') ? (
         <ConvoIconURL preset={conversation} endpointIconURL={iconURL} context="nav" />
       ) : (
-        <div className="shadow-stroke relative flex h-full items-center justify-center rounded-full">
+        <div className="relative flex h-full items-center justify-center rounded-full">
           {endpoint && Icon && (
             <Icon
               size={41}

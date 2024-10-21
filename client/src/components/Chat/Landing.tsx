@@ -37,7 +37,7 @@ export default function Landing({ Header }: { Header?: ReactNode }) {
   const avatar = (assistant && (assistant?.metadata?.avatar as string)) || '';
 
   const containerClassName =
-    'shadow-stroke relative flex h-full items-center justify-center rounded-full text-black';
+    'relative flex h-full items-center justify-center rounded-full text-black';
 
   return (
     <TooltipProvider delayDuration={50}>
