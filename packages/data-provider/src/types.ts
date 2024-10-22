@@ -301,6 +301,7 @@ export type TStartupConfig = {
   emailEnabled: boolean;
   checkBalance: boolean;
   showBirthdayIcon: boolean;
+  analyticsGtmId?: string;
   helpAndFaqURL: string;
   customFooter?: string;
   modelSpecs?: TSpecsConfig;
