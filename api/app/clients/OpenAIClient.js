@@ -1477,7 +1477,6 @@ if (this.options.piiCheckbox === "Block") {
           console.error('The selected PII method is not allowed.');
         }
         
-
   
         const stream = await openai.beta.chat.completions
         .stream({
@@ -1492,10 +1491,14 @@ if (this.options.piiCheckbox === "Block") {
                 },
               }
             : {}),
-          truncation_strategy: {
-            type: 'auto',
-            last_messages: 4, // Keep the last 1 message in case of token overflow
-          },
+          ...(this.options.endpoint.includes("OpenAI")
+            ? {} // Don't include truncation strategy for OpenAI
+            : {
+                truncation_strategy: {
+                  type: 'auto',
+                  last_messages: 4, // Keep the last 4 messages in case of token overflow
+                },
+              }),
         })
         .on('abort', () => {
           /* Do nothing here */
@@ -1505,6 +1508,7 @@ if (this.options.piiCheckbox === "Block") {
         })
         .on('finalChatCompletion', (finalChatCompletion) => {
           const finalMessage = finalChatCompletion?.choices?.[0]?.message;
+      
           if (finalMessage && finalMessage.role !== 'assistant') {
             finalChatCompletion.choices[0].message.role = 'assistant';
           }
@@ -1519,6 +1523,7 @@ if (this.options.piiCheckbox === "Block") {
             UnexpectedRoleError = true;
           }
         });
+      
       
 
         const azureDelay = this.modelOptions.model?.includes('gpt-4') ? 30 : 17;
