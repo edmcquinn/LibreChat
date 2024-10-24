@@ -474,7 +474,7 @@ export const openAISchema = tConversationSchema
     injectCheckbox: obj.injectCheckbox ?? false,
     piiCheckbox: obj.piiCheckbox ?? null,
     factualityText: obj.factualityText ?? null,
-    fullDocCheckbox: obj.fullDocCheckbox ?? false,
+    fullDocCheckbox: obj.fullDocCheckbox ?? true,
     };
 
     if (obj.modelLabel) {
@@ -504,7 +504,7 @@ export const openAISchema = tConversationSchema
     factualityCheckbox: false,
     toxicityCheckbox: false,
     injectCheckbox: false,
-    fullDocCheckbox: false,
+    fullDocCheckbox: true,
     piiCheckbox: null,
     factualityText: null,
   }));
