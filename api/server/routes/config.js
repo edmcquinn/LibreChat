@@ -51,7 +51,13 @@ router.get('/', async function (req, res) {
         process.env.SHOW_BIRTHDAY_ICON === '',
       helpAndFaqURL: process.env.HELP_AND_FAQ_URL || 'https://librechat.ai',
       interface: req.app.locals.interfaceConfig,
+      analyticsGtmId: process.env.ANALYTICS_GTM_ID,
       modelSpecs: req.app.locals.modelSpecs,
+      showToxicity: process.env.SHOW_TOXICITY !== 'false',
+      showInjection: process.env.SHOW_INJECTION !== 'false',
+      showFactuality: process.env.SHOW_FACTUALITY !== 'false',
+      showFactualityContext: process.env.SHOW_FACTUALITY_CONTEXT !== 'false',
+      showPII: process.env.SHOW_PII !== 'false',
     };
 
     if (typeof process.env.CUSTOM_FOOTER === 'string') {

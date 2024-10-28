@@ -47,7 +47,7 @@ export default function Message(props: TMessageProps) {
             <div className="relative flex flex-shrink-0 flex-col items-end">
               <div>
                 <div className="pt-0.5">
-                  <div className="shadow-stroke flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
+                  <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full">
                     <Icon message={message} conversation={conversation} assistant={assistant} />
                   </div>
                 </div>

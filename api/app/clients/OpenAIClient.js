@@ -427,6 +427,7 @@ class OpenAIClient extends BaseClient {
       injectCheckbox: this.options.injectCheckbox,
       piiCheckbox: this.options.piiCheckbox,
       factualityText: this.options.factualityText,
+      fullDocCheckbox: this.options.fullDocCheckbox,
       spec: this.options.spec,
       ...this.modelOptions,
     };
@@ -469,23 +470,35 @@ class OpenAIClient extends BaseClient {
       parentMessageId,
       summary: this.shouldSummarize,
     });
+  
     if (!isChatCompletion) {
       return await this.buildPrompt(orderedMessages, {
         isChatGptModel: isChatCompletion,
         promptPrefix,
       });
     }
-
+  
     let payload;
     let instructions;
     let tokenCountMap;
     let promptTokens;
+  
+    //Adding Safety Prompt - PG Code
+let safetyPrompt = process.env.SAFETY_PROMPT;
 
-    promptPrefix = (promptPrefix || this.options.promptPrefix || '').trim();
+// Adding Safety Prompt - PG Code
+if (safetyPrompt) {
+  promptPrefix = ((promptPrefix || this.options.promptPrefix || '').trim() + ' ' + safetyPrompt);
+} else {
+  promptPrefix = (promptPrefix || this.options.promptPrefix || '').trim();
+}
 
+
+  
+    // Attachments handling
     if (this.options.attachments) {
       const attachments = await this.options.attachments;
-
+  
       if (this.message_file_map) {
         this.message_file_map[orderedMessages[orderedMessages.length - 1].messageId] = attachments;
       } else {
@@ -493,37 +506,38 @@ class OpenAIClient extends BaseClient {
           [orderedMessages[orderedMessages.length - 1].messageId]: attachments,
         };
       }
-
+  
       const files = await this.addImageURLs(
         orderedMessages[orderedMessages.length - 1],
         attachments,
       );
-
+  
       this.options.attachments = files;
     }
-
+  
+    
+//Conditionally Turn on Send Full File - PG Code
     if (this.message_file_map) {
       this.contextHandlers = createContextHandlers(
         this.options.req,
-        orderedMessages[orderedMessages.length - 1].text,
+        orderedMessages[orderedMessages.length - 1].text, `${this.options.fullDocCheckbox}`
       );
     }
-
-    const formattedMessages = orderedMessages.map((message, i) => {
+  
+    // **Step 1: Calculate token counts without formatting**
+    orderedMessages.forEach((message, i) => {
       const formattedMessage = formatMessage({
         message,
         userName: this.options?.name,
         assistantName: this.options?.chatGptLabel,
       });
-
-      const needsTokenCount = this.contextStrategy && !orderedMessages[i].tokenCount;
-
-      /* If tokens were never counted, or, is a Vision request and the message has files, count again */
+  
+      const needsTokenCount = this.contextStrategy && !message.tokenCount;
+  
       if (needsTokenCount || (this.isVisionModel && (message.image_urls || message.files))) {
-        orderedMessages[i].tokenCount = this.getTokenCountForMessage(formattedMessage);
+        message.tokenCount = this.getTokenCountForMessage(formattedMessage);
       }
-
-      /* If message has files, calculate image token cost */
+  
       if (this.message_file_map && this.message_file_map[message.messageId]) {
         const attachments = this.message_file_map[message.messageId];
         for (const file of attachments) {
@@ -531,23 +545,64 @@ class OpenAIClient extends BaseClient {
             this.contextHandlers?.processFile(file);
             continue;
           }
-
-          orderedMessages[i].tokenCount += this.calculateImageTokenCost({
+  
+          message.tokenCount += this.calculateImageTokenCost({
             width: file.width,
             height: file.height,
             detail: this.options.imageDetail ?? ImageDetail.auto,
           });
         }
       }
-
-      return formattedMessage;
     });
 
+
+//     // **Step 2: Calculate total tokens and apply truncation if needed**
+
+//     const conservativeLimit = Math.floor(maxTokens * 0.91);
+//  // Apply a leeway
+//     let totalTokens = promptPrefix ? this.getTokenCountForMessage({ content: promptPrefix }) : 0;
+  
+//     totalTokens += orderedMessages.reduce((count, message) => {
+//       return count + message.tokenCount;
+//     }, 0);
+  
+//     // Truncate messages if total tokens exceed the conservative limit
+//     const truncatedMessages = [];
+//     while (totalTokens > conservativeLimit && orderedMessages.length > 1) {
+//       const removedMessage = orderedMessages.shift();
+//       totalTokens -= removedMessage.tokenCount;
+//       truncatedMessages.push(removedMessage);
+//     }
+  
+
+
+//     if (totalTokens > this.options.maxContextTokens) {
+//       throw new Error(
+//         `Total tokens still exceed the limit after truncation: ${totalTokens}, Max allowed tokens: ${conservativeLimit}`,
+//       );
+//     }
+  
+//     if (truncatedMessages.length > 0) {
+//       truncatedMessages.forEach((message, index) => {
+//         console.log(`Truncated message ${index + 1}:`, message);
+//       });
+//     }
+  
+    // **Step 3: Format messages after truncation**
+    const formattedMessages = orderedMessages.map((message) => {
+      return formatMessage({
+        message,
+        userName: this.options?.name,
+        assistantName: this.options?.chatGptLabel,
+      });
+    });
+  
+    // If there is a context handler, create augmented prompt
     if (this.contextHandlers) {
       this.augmentedPrompt = await this.contextHandlers.createContext();
       promptPrefix = this.augmentedPrompt + promptPrefix;
     }
-
+  
     if (promptPrefix) {
       promptPrefix = `Instructions:\n${promptPrefix.trim()}`;
       instructions = {
@@ -555,39 +610,50 @@ class OpenAIClient extends BaseClient {
         name: 'instructions',
         content: promptPrefix,
       };
-
+  
+      const wordCount = promptPrefix.trim().split(/\s+/).length;
+console.log(wordCount);
       if (this.contextStrategy) {
         instructions.tokenCount = this.getTokenCountForMessage(instructions);
       }
     }
 
-    // TODO: need to handle interleaving instructions better
+
+  
+    // Handle context strategy
     if (this.contextStrategy) {
-      ({ payload, tokenCountMap, promptTokens, messages } = await this.handleContextStrategy({
+      ({
+        payload,
+        tokenCountMap,
+        promptTokens,
+        messages,
+      } = await this.handleContextStrategy({
         instructions,
         orderedMessages,
         formattedMessages,
       }));
     }
-
+  
     const result = {
       prompt: payload,
       promptTokens,
       messages,
     };
-
+  
     if (tokenCountMap) {
       tokenCountMap.instructions = instructions?.tokenCount;
       result.tokenCountMap = tokenCountMap;
     }
-
+  
     if (promptTokens >= 0 && typeof opts?.getReqData === 'function') {
       opts.getReqData({ promptTokens });
     }
-
+    // console.log(this.options.maxContextTokens,conservativeLimit,totalTokens)
+    console.log("result:", result)
     return result;
   }
-
+  
+  
   /** @type {sendCompletion} */
   async sendCompletion(payload, opts = {}) {
     let reply = '';
@@ -672,6 +738,7 @@ class OpenAIClient extends BaseClient {
     return (reply ?? '').trim();
   }
 
+
   initializeLLM({
     model = 'gpt-3.5-turbo',
     modelName,
@@ -690,6 +757,7 @@ class OpenAIClient extends BaseClient {
     factualityText,
     injectCheckbox,
     piiCheckbox,
+    fullDocCheckbox,
   }) {
     const modelOptions = {
       modelName: modelName ?? model,
@@ -701,6 +769,7 @@ class OpenAIClient extends BaseClient {
       consistencyCheckbox,
       factualityCheckbox,
       injectCheckbox,
+      fullDocCheckbox,
       piiCheckbox,
       factualityText,
       max_tokens,
@@ -1263,7 +1332,7 @@ for (let i = messages.length - 1; i >= 0; i--) {
         blockPromptInject == true
       ) {
         try {
-          const injectResponse = await fetch('https://api.predictionguard.com/injection', {
+          const injectResponse = await fetch(`${process.env.PG_BASE_URL}/injection`, {
             method: 'POST',
             headers: {
               'x-api-key': process.env.PGTOKEN, // Use your actual API key
@@ -1280,44 +1349,58 @@ for (let i = messages.length - 1; i >= 0; i--) {
         }
       }
 //PG - Block PII
-      if (this.options.piiCheckbox === "Block") {
-        try {
-          PiiBlock = false;
-      
-          // Define a unique delimiter that is unlikely to appear in the content
-          const delimiter = '__UNIQUE_DELIMITER__';
-      
-          // Combine all messages in the payload into a single string
-          const combinedPayload = payload
-            .map(message => `${message.role}: ${message.content}`)
-            .join(delimiter);
-      
-          const completionResponse = await fetch('https://api.predictionguard.com/completions', {
-            method: 'POST',
-            headers: {
-              'x-api-key': process.env.PGTOKEN, // Use your actual API key
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'Nous-Hermes-Llama2-13B',
-              prompt: combinedPayload,  // Use the combined payload as the prompt
-              max_tokens: 100,
-              temperature: 0.7,
-              top_p: 0.9,
-              input: { pii: 'block' },
-            }),
-          });
-      
-          const completionData = await completionResponse.json();
-      
-          // Check the PII block status
-          PiiBlock = completionData.choices[0].status.includes('personal');
-      
-        } catch (error) {
-          console.error('Error fetching PII status:', error);
-          PiiBlock = null; // Handle the error as appropriate
+if (this.options.piiCheckbox === "Block") {
+  try {
+    PiiBlock = false;
+
+    const completionResponse = await fetch(`${process.env.PG_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.PGTOKEN}`, // Use your actual API key
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'Neural-Chat-7B',  // Use your chosen model
+        messages: [
+          {
+            role: 'user',
+            content: `${lastUserMessageContent}`,  // User message content as input
+          }
+        ],
+        max_tokens: 1,
+        temperature: 1,
+        top_p: 1,
+        top_k: 50,
+        input: {
+          pii: 'block'  // Block PII as per your request
         }
+      })
+    });
+
+    // Check if the status code is not 200 (success)
+    if (!completionResponse.ok) {
+      console.error(`Error: Received status ${completionResponse.status}`);
+      
+      // Handle 400 Bad Request error
+      if (completionResponse.status === 400) {
+        console.error('400 Bad Request error encountered.');
+        PiiBlock = true;  // Set PiiBlock as true for 400 error
+      } else {
+        PiiBlock = false;  // Handle other types of errors
       }
+      
+    }
+
+    // Handle successful response here (e.g., logging or processing)
+    const data = await completionResponse.json();
+    console.log(data);
+
+  } catch (error) {
+    console.error('An error occurred while processing the request:', error);
+    PiiBlock = false;  // Set PiiBlock in case of any error
+  }
+}
+
 
 
         let includeInput = false
@@ -1352,7 +1435,7 @@ for (let i = messages.length - 1; i >= 0; i--) {
               .join(delimiter);
         
             // Send the combined prompt to the PII API for replacement
-            const completionResponse = await fetch('https://api.predictionguard.com/PII', {
+            const completionResponse = await fetch(`${process.env.PG_BASE_URL}/PII`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${process.env.PGTOKEN}`, // Use your actual API token
@@ -1394,42 +1477,54 @@ for (let i = messages.length - 1; i >= 0; i--) {
           console.error('The selected PII method is not allowed.');
         }
         
-
   
         const stream = await openai.beta.chat.completions
         .stream({
           ...modelOptions,
           stream: true,
-          ...(includeInput ? {
-            input: {
-              //PG - PII options when using a Prediction Guard Endpoint
-              "pii": "replace",
-              "pii_replace_method": this.options.piiCheckbox.toLowerCase()
-            }
-          } : {})
+          ...(includeInput
+            ? {
+                input: {
+                  // PG - PII options when using a Prediction Guard Endpoint
+                  pii: 'replace',
+                  pii_replace_method: this.options.piiCheckbox.toLowerCase(),
+                },
+              }
+            : {}),
+          ...(this.options.endpoint.includes("OpenAI")
+            ? {} // Don't include truncation strategy for OpenAI
+            : {
+                truncation_strategy: {
+                  type: 'auto',
+                  last_messages: 4, // Keep the last 4 messages in case of token overflow
+                },
+              }),
         })
-          .on('abort', () => {
-            /* Do nothing here */
-          })
-          .on('error', (err) => {
-            handleOpenAIErrors(err, errorCallback, 'stream');
-          })
-          .on('finalChatCompletion', (finalChatCompletion) => {
-            const finalMessage = finalChatCompletion?.choices?.[0]?.message;
-            if (finalMessage && finalMessage?.role !== 'assistant') {
-              finalChatCompletion.choices[0].message.role = 'assistant';
-            }
-
-            if (finalMessage && !finalMessage?.content?.trim()) {
-              finalChatCompletion.choices[0].message.content = intermediateReply;
-            }
-          })
-          .on('finalMessage', (message) => {
-            if (message?.role !== 'assistant') {
-              stream.messages.push({ role: 'assistant', content: intermediateReply });
-              UnexpectedRoleError = true;
-            }
-          });
+        .on('abort', () => {
+          /* Do nothing here */
+        })
+        .on('error', (err) => {
+          handleOpenAIErrors(err, errorCallback, 'stream');
+        })
+        .on('finalChatCompletion', (finalChatCompletion) => {
+          const finalMessage = finalChatCompletion?.choices?.[0]?.message;
+      
+          if (finalMessage && finalMessage.role !== 'assistant') {
+            finalChatCompletion.choices[0].message.role = 'assistant';
+          }
+      
+          if (finalMessage && !finalMessage?.content?.trim()) {
+            finalChatCompletion.choices[0].message.content = intermediateReply;
+          }
+        })
+        .on('finalMessage', (message) => {
+          if (message?.role !== 'assistant') {
+            stream.messages.push({ role: 'assistant', content: intermediateReply });
+            UnexpectedRoleError = true;
+          }
+        });
+      
+      
 
         const azureDelay = this.modelOptions.model?.includes('gpt-4') ? 30 : 17;
         // console.log(PiiBlock)
@@ -1530,7 +1625,7 @@ for (let i = messages.length - 1; i >= 0; i--) {
           throw err;
         }
       } else {
-        logger.error('[OpenAIClient.chatCompletion] Unhandled error type', err);
+        logger.error('[OpenAIClient.chatCompletion] Unhandled error type', err, err.message);
         throw err;
       }
     }

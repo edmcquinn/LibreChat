@@ -129,7 +129,9 @@ const conversationPreset = {
   piiCheckbox: {
     type: String,
   },
-  
+  fullDocCheckbox: {
+    type: Boolean,
+  },
 };
 
 const agentOptions = {
@@ -206,6 +208,9 @@ const agentOptions = {
   },
   factualityText: {
     type: String,
+  },
+  fullDocCheckbox: {
+    type: Boolean,
   },
 };
 

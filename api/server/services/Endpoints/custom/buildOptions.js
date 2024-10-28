@@ -14,6 +14,7 @@ const buildOptions = (endpoint, parsedBody, endpointType) => {
     piiCheckbox,
     injectCheckbox,
     factualityText,
+    fullDocCheckbox,
     max_tokens,
     ...rest
   } = parsedBody;
@@ -34,6 +35,7 @@ const buildOptions = (endpoint, parsedBody, endpointType) => {
     piiCheckbox,
     injectCheckbox,
     factualityText,
+    fullDocCheckbox,
     max_tokens,
     modelOptions: {
       ...rest,

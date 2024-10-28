@@ -1,0 +1,124 @@
+# For more information, see the Configuration Guide:
+# https://www.librechat.ai/docs/configuration/librechat_yaml
+
+# Configuration version (required)
+version: 1.0.9
+
+# Cache settings: Set to true to enable caching
+cache: true
+
+# Custom interface configuration
+interface:
+  # Privacy policy settings
+    sidePanel: false
+    endpointsMenu: true
+    modelSelect: true
+    parameters: true
+    presets: true
+
+# Example Registration Object Structure (optional)
+# registration:
+#   socialLogins: ['openid']
+#   # allowedDomains:
+#   # - "gmail.com"
+
+# tts:
+#   url: ''
+#   apiKey: '${TTS_API_KEY}'
+#   model: ''
+#   backend: ''
+#   voice: ''
+#   compatibility: ''
+#   voice_settings:
+#     similarity_boost: ''
+#     stability: ''
+#     style: ''
+#     use_speaker_boost:
+#   pronunciation_dictionary_locators: ['']
+#  
+# stt:
+#   url: ''
+#   apiKey: '${STT_API_KEY}'
+#   model: ''
+
+# rateLimits:
+#   fileUploads:
+#     ipMax: 100
+#     ipWindowInMinutes: 60  # Rate limit window for file uploads per IP
+#     userMax: 50
+#     userWindowInMinutes: 60  # Rate limit window for file uploads per user
+#   conversationsImport:
+#     ipMax: 100
+#     ipWindowInMinutes: 60  # Rate limit window for conversation imports per IP
+#     userMax: 50
+#     userWindowInMinutes: 60  # Rate limit window for conversation imports per user
+
+# Definition of custom endpoints
+endpoints:
+  # assistants:
+  #   disableBuilder: false # Disable Assistants Builder Interface by setting to `true`
+  #   pollIntervalMs: 3000  # Polling interval for checking assistant updates
+  #   timeoutMs: 180000  # Timeout for assistant operations
+  #   # Should only be one or the other, either `supportedIds` or `excludedIds`
+  #   supportedIds: ["asst_supportedAssistantId1", "asst_supportedAssistantId2"]
+  #   # excludedIds: ["asst_excludedAssistantId"]
+  #   Only show assistants that the user created or that were created externally (e.g. in Assistants playground).
+  #   # privateAssistants: false # Does not work with `supportedIds` or `excludedIds`
+  #   # (optional) Models that support retrieval, will default to latest known OpenAI models that support the feature
+  #   retrievalModels: ["gpt-4-turbo-preview"]
+  #   # (optional) Assistant Capabilities available to all users. Omit the ones you wish to exclude. Defaults to list below.
+  #   capabilities: ["code_interpreter", "retrieval", "actions", "tools", "image_vision"]
+  custom:
+    # Prediction Guard Example - 
+    - name: 'Chat Models' #This must contain the word "Models" or be "PredictionGuard"
+      apiKey: '${PGTOKEN}'
+      baseURL: 'https://api.predictionguard.com' #CHANGE THIS IF YOU HAVE A CUSTOM API ENDPOINT
+      iconURL: https://publicpgdocimages.s3.us-east-1.amazonaws.com/pglogo.svg  #Change this to change the image used for the models
+      models: 
+        default: #Update these as new Chat model come out from Prediction Guard
+          [
+            'Hermes-2-Pro-Llama-3-8B',
+            'Hermes-2-Pro-Mistral-7B',
+            'Neural-Chat-7B',
+          ]
+        fetch: false # Model fetching is not supported currently 
+      titleConvo: true # 
+      titleModel: 'Hermes-2-Pro-Llama-3-8B' 
+      summarize: false # feature is not supported
+      summaryModel: '' # No summary model as summarize is false
+      forcePrompt: false # Assuming forcePrompt is not necessary
+      modelDisplayLabel: 'Private Chat' # Change this to be whatever you want
+      stream: true
+      headers:
+        Content-Type: 'application/json'
+        User-Agent: "Prediction Guard Chat: CHAT"
+    - name: 'Coding Models' #This must contain the word "Models" or be PredictionGuard
+      apiKey: '${PGTOKEN}'
+      baseURL: 'https://api.predictionguard.com' #CHANGE THIS IF USING CUSTOM ENDPOINT
+      iconURL: https://publicpgdocimages.s3.us-east-1.amazonaws.com/pglogo.svg #Change this to change the image used for the models
+      models:
+        default: #Update these as new Chat model come out from Prediction Guard
+          [
+            'llama-3-sqlcoder-8b',
+            'deepseek-coder-6.7b-instruct'
+          ]
+        fetch: false # Assuming model fetching is not supported
+      titleConvo: true # Assuming title conversation feature is not supported
+      titleModel: 'Hermes-2-Pro-Llama-3-8B' # No title model as titleConvo is false
+      summarize: false # Assuming summarization feature is not supported
+      summaryModel: '' # No summary model as summarize is false
+      forcePrompt: false # Assuming forcePrompt is not necessary
+      modelDisplayLabel: 'Private Chat' # Display label for the model - Change this to change the presaved text in the chat text box and bot name.
+      stream: true
+      headers:
+        Content-Type: 'application/json'
+
+# add this to disable the file upload options for models that don't support it
+fileConfig:
+  endpoints:
+    PredictionGuard:
+      disabled: true
+    Chat Models:
+      disabled: true
+    Coding Models:
+      disabled: true

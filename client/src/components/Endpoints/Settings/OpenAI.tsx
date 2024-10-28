@@ -18,8 +18,9 @@ import {
 } from '~/components/ui';
 import { cn, defaultTextProps, removeFocusOutlines, removeFocusRings } from '~/utils';
 import { useLocalize, useDebouncedInput } from '~/hooks';
-
+import { useGetStartupConfig } from 'librechat-data-provider/react-query';
 export default function Settings({ conversation, setOption, models, readonly }: TModelSelectProps) {
+  const { data: config } = useGetStartupConfig();
   const localize = useLocalize();
   const {
     endpoint,
@@ -41,6 +42,7 @@ export default function Settings({ conversation, setOption, models, readonly }: 
     factualityText,
     injectCheckbox,
     piiCheckbox,
+    fullDocCheckbox,
   } = conversation ?? {};
 
   const [setChatGptLabel, chatGptLabelValue] = useDebouncedInput<string | null | undefined>({
@@ -81,6 +83,7 @@ export default function Settings({ conversation, setOption, models, readonly }: 
   const setToxicity = setOption('toxicityCheckbox');
   const setFactuality = setOption('factualityCheckbox');
   const setInjection = setOption('injectCheckbox');
+  const setFullDoc = setOption('fullDocCheckbox');
   const setPII = setOption('piiCheckbox');
   const piiOptions = [
     { value: '', label: 'None' }, // Default blank option
@@ -112,6 +115,10 @@ export default function Settings({ conversation, setOption, models, readonly }: 
   const setResendFiles = setOption('resendFiles');
   const setImageDetail = setOption('imageDetail');
 
+//Hide Based on Config - PG CODE
+const { showToxicity, showInjection, showFactuality, showFactualityContext, showPII } = config;
+  
+  
   return (
     <TooltipProvider>
       {endpoint === 'PredictionGuard' || endpoint.includes("Models") ? (
@@ -177,30 +184,62 @@ export default function Settings({ conversation, setOption, models, readonly }: 
                 )}
               />
             </div>
+            {showPII && (
             <div className="grid w-full items-center gap-2">
-              <Label htmlFor="factualityText" className="text-left text-sm font-medium flex items-center">
-                Factuality Context
-                <small className="opacity-40">({localize('com_endpoint_default_blank')})</small>
+              <Label htmlFor="pii-dropdown" className="text-left text-sm font-medium flex items-center">
+                <small>PII Anonymization</small>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
                   </TooltipTrigger>
-                  <TooltipContent>Provide factuality context</TooltipContent>
+                  <TooltipContent>
+                    Choose an option for handling PII -
+                    Replace: This replaces detected PII with fake names or details.
+                    Block: This blocks the prompt containing PII from reaching the LLM.
+                    Random: This replaces the detected PII with random characters.
+                    Category: This masks the PII with the entity type.
+                    Mask: This simply replaces PII with asterisks (*)
+                  </TooltipContent>
                 </Tooltip>
               </Label>
-              <TextareaAutosize
-                id="factualityText"
+              <SelectDropDown
+                id="pii-dropdown"
+                value={piiCheckbox ?? ''}
+                setValue={setPII}
+                availableValues={piiOptions}
                 disabled={readonly}
-                value={factualityText || ''}
-                onChange={(e) => setFactualityText(e.target.value ?? null)}
-                placeholder="Please provide Factuality Context for the relevance of the output to the input prompts."
-                className={cn(
-                  defaultTextProps,
-                  'dark:bg-gray-700 dark:hover:bg-gray-700/60 dark:focus:bg-gray-700',
-                  'flex max-h-[138px] min-h-[100px] w-full resize-none px-3 py-2 ',
-                )}
+                className={cn(defaultTextProps, 'flex w-full resize-none', removeFocusRings)}
+                containerClassName="flex w-full resize-none"
+                title="Select PII Anonymization Option"
               />
-            </div>
+            </div>)}
+            
+            {showFactualityContext && (
+              <div className="grid w-full items-center gap-2">
+                <Label htmlFor="factualityText" className="text-left text-sm font-medium flex items-center">
+                  Factuality Context
+                  <small className="opacity-40">({localize('com_endpoint_default_blank')})</small>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
+                    </TooltipTrigger>
+                    <TooltipContent>Provide factuality context</TooltipContent>
+                  </Tooltip>
+                </Label>
+                <TextareaAutosize
+                  id="factualityText"
+                  disabled={readonly}
+                  value={factualityText || ''}
+                  onChange={(e) => setFactualityText(e.target.value ?? null)}
+                  placeholder="Please provide Factuality Context for the relevance of the output to the input prompts."
+                  className={cn(
+                    defaultTextProps,
+                    'dark:bg-gray-700 dark:hover:bg-gray-700/60 dark:focus:bg-gray-700',
+                    'flex max-h-[138px] min-h-[100px] w-full resize-none px-3 py-2 ',
+                  )}
+                />
+              </div>
+            )}
           </div>
           <div className="col-span-5 sm:col-span-2 flex flex-col items-center justify-start gap-6">
             <div className="grid w-full items-center gap-2">
@@ -210,7 +249,9 @@ export default function Settings({ conversation, setOption, models, readonly }: 
                   <TooltipTrigger asChild>
                     <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
                   </TooltipTrigger>
-                  <TooltipContent>Set the maximum number of output tokens. This controls the max output of the model to your question. This can cause truncation if it is set too low.</TooltipContent>
+                  <TooltipContent>
+                    Set the maximum number of output tokens. This controls the max output of the model to your question. This can cause truncation if it is set too low. The default is 1000
+                  </TooltipContent>
                 </Tooltip>
               </Label>
               <InputNumber
@@ -236,14 +277,14 @@ export default function Settings({ conversation, setOption, models, readonly }: 
             <div className="grid w-full items-center gap-2">
               <Label htmlFor="temp-int" className="text-left text-sm font-medium flex items-center">
                 {localize('com_endpoint_temperature')}
-                <small className="opacity-40">
-                  ({localize('com_endpoint_default_with_num', '1')})
-                </small>
+                <small className="opacity-40">({localize('com_endpoint_default_with_num', '1')})</small>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
                   </TooltipTrigger>
-                  <TooltipContent>Set the temperature value. This controls how creative the model is. The lower the number the more consistent the model will be, but it will be less creative.</TooltipContent>
+                  <TooltipContent>
+                    Set the temperature value. This controls how creative the model is. The lower the number the more consistent the model will be, but it will be less creative.
+                  </TooltipContent>
                 </Tooltip>
               </Label>
               <InputNumber
@@ -274,90 +315,119 @@ export default function Settings({ conversation, setOption, models, readonly }: 
                 className="flex h-4 w-full"
               />
             </div>
-            <div className="grid w-full items-center gap-2">
-              <Label htmlFor="toxicity-checkbox" className="text-left text-sm font-medium flex items-center">
-                <small>Toxicity</small>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
-                  </TooltipTrigger>
-                  <TooltipContent>Toggle toxicity check. This will show you the level of toxicity the message has. This setting is useful in an API setting where you want to prevent a user from seeing toxic content programmatically.</TooltipContent>
-                </Tooltip>
-              </Label>
-              <Switch
-                id="toxicity-checkbox"
-                checked={toxicityCheckbox ?? false}
-                onCheckedChange={(checked: boolean) => setToxicity(checked)}
-                disabled={readonly}
-                className="flex"
-              />
-            </div>
+            
+            {showToxicity && (
+              <div className="grid w-full items-center gap-2">
+                <Label htmlFor="toxicity-checkbox" className="text-left text-sm font-medium flex items-center">
+                  <small>Toxicity</small>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Toggle toxicity check. This will show you the level of toxicity the message has. 
+                      This setting is useful in an API setting where you want to prevent a user from seeing toxic content programmatically.
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+                <Switch
+                  id="toxicity-checkbox"
+                  checked={toxicityCheckbox ?? false}
+                  onCheckedChange={(checked: boolean) => setToxicity(checked)}
+                  disabled={readonly}
+                  className="flex"
+                />
+              </div>
+            )}
+            
+            {showInjection && (
+              <div className="grid w-full items-center gap-2">
+                <Label htmlFor="inject-checkbox" className="text-left text-sm font-medium flex items-center">
+                  <small>Block Prompt Injections</small>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Toggle Prompt Injection Check to assess whether the last incoming prompt might be an injection attempt before it reaches the LLM.
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+                <Switch
+                  id="inject-checkbox"
+                  checked={injectCheckbox ?? false}
+                  onCheckedChange={(checked: boolean) => setInjection(checked)}
+                  disabled={readonly}
+                  className="flex"
+                />
+              </div>
+            )}
+  
+            {showFactuality && (
+              <div className="grid w-full items-center gap-2">
+                <Label htmlFor="factuality-checkbox" className="text-left text-sm font-medium flex items-center">
+                  <small>Factuality</small>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Toggle factuality check. It compares the relevance of the output of the model to the Factuality Context. You must also provide the Factuality Context.
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+                <Switch
+                  id="factuality-checkbox"
+                  checked={factualityCheckbox ?? false}
+                  onCheckedChange={(checked: boolean) => setFactuality(checked)}
+                  disabled={readonly}
+                  className="flex"
+                />
+              </div>
+            )}
 
-            <div className="grid w-full items-center gap-2">
-              <Label htmlFor="inject-checkbox" className="text-left text-sm font-medium flex items-center">
-                <small>Block Prompt Injections</small>
+<div className="grid w-full items-center gap-2">
+              <Label htmlFor="resend-checkbox" className="text-left text-sm font-medium flex items-center">
+                <small>Resend Files</small>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
                   </TooltipTrigger>
-                  <TooltipContent>Toggle Prompt Injection Check to assess whether the last incoming prompt might be an injection attempt before it reaches the LLM.</TooltipContent>
+                  <TooltipContent>
+                    Unchecking this button overrides the default file behavior. Instead of using sending the documents with every message it will only do it when the file is actually attached to the message directly. 
+                  </TooltipContent>
                 </Tooltip>
               </Label>
               <Switch
                 id="inject-checkbox"
-                checked={injectCheckbox ?? false}
-                onCheckedChange={(checked: boolean) => setInjection(checked)}
+                checked={resendFiles ?? false}
+                onCheckedChange={(checked: boolean) => setResendFiles(checked)}
+                disabled={readonly}
+                className="flex"
+              />
+            </div>
+  
+            <div className="grid w-full items-center gap-2">
+              <Label htmlFor="inject-checkbox" className="text-left text-sm font-medium flex items-center">
+                <small>Send Full Document to Model</small>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Checking this button overrides the default file upload behavior. Instead of using RAG, the full document will be sent directly to the model. Note that if the document exceeds the model's context length, it will result in an error. This option is best suited for single small documents.
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
+              <Switch
+                id="inject-checkbox"
+                checked={fullDocCheckbox ?? false}
+                onCheckedChange={(checked: boolean) => setFullDoc(checked)}
                 disabled={readonly}
                 className="flex"
               />
             </div>
 
-            <div className="grid w-full items-center gap-2">
-              <Label htmlFor="factuality-checkbox" className="text-left text-sm font-medium flex items-center">
-                <small>Factuality</small>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
-                  </TooltipTrigger>
-                  <TooltipContent>Toggle factuality check. It compares the relevance of the output of the model to the Factuality Context. You must also provide the Factuality Context.</TooltipContent>
-                </Tooltip>
-              </Label>
-              <Switch
-                id="factuality-checkbox"
-                checked={factualityCheckbox ?? false}
-                onCheckedChange={(checked: boolean) => setFactuality(checked)}
-                disabled={readonly}
-                className="flex"
-              />
-            </div>
-            <div className="grid w-full items-center gap-2">
-      <Label htmlFor="pii-dropdown" className="text-left text-sm font-medium flex items-center">
-        <small>PII Anonymization</small>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="ml-2 cursor-pointer text-gray-500">ⓘ</span>
-          </TooltipTrigger>
-          <TooltipContent>
-Choose an option for handling PII -
-Replace: This replaces detected PII with fake names or details.
-Block: This blocks the prompt containing PII from reaching the LLM.
-Random: This replaces the detected PII with random characters.
-Category: This masks the PII with the entity type.
-Mask: This simply replaces PII with asterisks (*)
-          </TooltipContent>
-        </Tooltip>
-      </Label>
-      <SelectDropDown
-        id="pii-dropdown"
-        value={piiCheckbox ?? ''}
-        setValue={setPII}
-        availableValues={piiOptions}
-        disabled={readonly}
-        className={cn(defaultTextProps, 'flex w-full resize-none', removeFocusRings)}
-        containerClassName="flex w-full resize-none"
-        title="Select PII Anonymization Option"
-      />
-    </div>
           </div>
         </div>
       ) : (
